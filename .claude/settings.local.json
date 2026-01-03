@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/brian/src/blaster branch -a)",
+      "WebSearch",
+      "Bash(npm install:*)"
+    ]
+  }
+}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Claude - Mock</title>
+</head>
+<body>
+  <div id="app">
+    <!-- Header / Nav -->
+    <nav>
+      <button class="user-avatar" data-testid="user-menu">
+        <span>U</span>
+      </button>
+    </nav>
+
+    <!-- Main Chat Area -->
+    <main>
+      <div class="chat-container">
+        <!-- Conversation area -->
+        <div class="conversation">
+          <!-- User message example -->
+          <div class="human-message">
+            <p>Hello, how are you?</p>
+          </div>
+
+          <!-- Assistant response example (will be dynamically added in tests) -->
+        </div>
+
+        <!-- Input area -->
+        <fieldset class="input-container">
+          <div
+            class="ProseMirror"
+            contenteditable="true"
+            data-placeholder="Reply to Claude..."
+            role="textbox"
+          >
+            <p></p>
+          </div>
+          <button
+            type="button"
+            aria-label="Send Message"
+            class="send-button"
+          >
+            <svg viewBox="0 0 24 24" width="24" height="24">
+              <path d="M2 21l21-9L2 3v7l15 2-15 2z"/>
+            </svg>
+          </button>
+        </fieldset>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

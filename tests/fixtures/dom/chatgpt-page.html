@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ChatGPT - Mock</title>
+</head>
+<body>
+  <div id="__next">
+    <!-- Header / Nav -->
+    <nav>
+      <div class="user-menu" data-testid="user-menu">
+        <img src="/avatar.png" alt="User Avatar" class="avatar" />
+      </div>
+    </nav>
+
+    <!-- Main Chat Area -->
+    <main>
+      <div class="chat-container">
+        <!-- Conversation area -->
+        <div class="conversation">
+          <!-- User message example -->
+          <div data-message-author-role="user">
+            <div class="markdown">Hello, how are you?</div>
+          </div>
+
+          <!-- Assistant response example (will be dynamically added in tests) -->
+        </div>
+
+        <!-- Input area -->
+        <form class="stretch mx-2 flex flex-row gap-3 pt-2">
+          <div class="relative flex h-full flex-1 flex-col">
+            <textarea
+              id="prompt-textarea"
+              data-id="root"
+              tabindex="0"
+              rows="1"
+              placeholder="Send a message..."
+              class="m-0 w-full resize-none border-0 bg-transparent py-2 pr-7 focus:ring-0 focus-visible:ring-0 md:py-3 md:pr-12"
+            ></textarea>
+          </div>
+          <button
+            type="submit"
+            data-testid="send-button"
+            aria-label="Send message"
+            class="btn relative btn-primary"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M7 11L12 6L17 11M12 18V7" stroke="currentColor" stroke-width="2"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Gemini - Mock</title>
+</head>
+<body>
+  <div id="app-root">
+    <!-- Header / Nav -->
+    <header>
+      <img src="/profile.jpg" alt="profile" class="user-avatar" data-user-id="12345" />
+    </header>
+
+    <!-- Main Chat Area -->
+    <main>
+      <div class="chat-container">
+        <!-- Conversation area -->
+        <div class="conversation">
+          <!-- User message example -->
+          <message-content class="user">
+            <p>Hello, how are you?</p>
+          </message-content>
+
+          <!-- Model response example (will be dynamically added in tests) -->
+        </div>
+
+        <!-- Input area -->
+        <div class="input-area">
+          <rich-textarea>
+            <div
+              contenteditable="true"
+              role="textbox"
+              aria-label="Enter a prompt here"
+              class="ql-editor"
+            ></div>
+          </rich-textarea>
+          <button
+            aria-label="Send message"
+            class="send-button"
+            data-test-id="send-button"
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M2 21l21-9L2 3v7l15 2-15 2z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
