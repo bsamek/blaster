@@ -7,12 +7,13 @@ export class ClaudeAdapter extends BaseProviderAdapter {
 
   getSelectors(): ProviderSelectors {
     return {
-      // Claude uses a contenteditable div
-      textareaSelector: 'div[contenteditable="true"].ProseMirror, fieldset textarea, div[data-placeholder]',
-      submitButtonSelector: 'button[aria-label*="Send"], button:has(svg[data-icon="send"]), fieldset button[type="button"]',
-      responseContainerSelector: '[data-is-streaming], .font-claude-message, div[class*="claude-message"]',
-      responseTextSelector: '.prose, .whitespace-pre-wrap, p',
-      loadingIndicatorSelector: '[data-is-streaming="true"], .animate-pulse',
+      // Claude uses a contenteditable div (ProseMirror)
+      textareaSelector: 'div[contenteditable="true"].ProseMirror, div.ProseMirror[contenteditable="true"], fieldset div[contenteditable="true"]',
+      submitButtonSelector: 'button[aria-label*="Send"], button[aria-label*="send message"], fieldset button:not([disabled])',
+      // Claude's response containers - look for assistant/Claude messages
+      responseContainerSelector: '[data-is-streaming], div[class*="font-claude"], div.prose, div[data-testid*="message"]',
+      responseTextSelector: '.prose, .whitespace-pre-wrap, p, span',
+      loadingIndicatorSelector: '[data-is-streaming="true"], .animate-pulse, .typing-indicator',
     };
   }
 
@@ -105,20 +106,58 @@ export class ClaudeAdapter extends BaseProviderAdapter {
   }
 
   getResponse(): string | null {
+    // Try multiple strategies to find Claude's response
     const selectors = this.getSelectors();
-    const containers = document.querySelectorAll(selectors.responseContainerSelector);
+
+    // Strategy 1: Look for specific response containers (Claude/assistant messages)
+    let containers = document.querySelectorAll(selectors.responseContainerSelector);
+
+    // Strategy 2: Look for Claude-specific response elements (avoid human messages)
+    if (containers.length === 0) {
+      containers = document.querySelectorAll(
+        'div[class*="font-claude"], div[class*="assistant"], div[class*="claude-message"]'
+      );
+    }
+
+    // Strategy 3: Look in conversation area for prose that's NOT in a human/user message
+    if (containers.length === 0) {
+      const conversationArea = document.querySelector('main, [role="main"], .conversation');
+      if (conversationArea) {
+        // Get all prose elements that are NOT inside human/user message containers
+        const proseElements = conversationArea.querySelectorAll('div.prose');
+        const filtered: Element[] = [];
+        proseElements.forEach((el) => {
+          const parent = el.closest('.human-message, .user-message, [data-author="user"]');
+          if (!parent) {
+            filtered.push(el);
+          }
+        });
+        if (filtered.length > 0) {
+          containers = filtered as unknown as NodeListOf<Element>;
+        }
+      }
+    }
+
     if (containers.length === 0) return null;
 
-    const lastContainer = containers[containers.length - 1];
+    // Get the last container (most recent response)
+    const lastContainer = Array.isArray(containers)
+      ? containers[containers.length - 1]
+      : containers[containers.length - 1];
+
     const textElements = lastContainer.querySelectorAll(selectors.responseTextSelector);
 
     // Combine all text from prose elements
     let text = '';
-    textElements.forEach((el) => {
-      text += el.textContent + '\n';
-    });
+    if (textElements.length > 0) {
+      textElements.forEach((el: Element) => {
+        text += el.textContent + '\n';
+      });
+    } else {
+      text = lastContainer.textContent || '';
+    }
 
-    return text.trim() || lastContainer.textContent?.trim() || null;
+    return text.trim() || null;
   }
 
   protected extractResponseText(): string {

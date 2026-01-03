@@ -7,12 +7,12 @@ export class ChatGPTAdapter extends BaseProviderAdapter {
 
   getSelectors(): ProviderSelectors {
     return {
-      // ChatGPT uses a contenteditable div, not a textarea in newer versions
-      textareaSelector: '#prompt-textarea, [data-id="root"] textarea, div[contenteditable="true"]#prompt-textarea',
-      submitButtonSelector: 'button[data-testid="send-button"], button[aria-label*="Send"], form button[type="submit"]',
-      responseContainerSelector: '[data-message-author-role="assistant"], .agent-turn',
-      responseTextSelector: '.markdown, .prose',
-      loadingIndicatorSelector: '.result-streaming, [data-testid="stop-button"]',
+      // ChatGPT uses a contenteditable div (ProseMirror) in newer versions
+      textareaSelector: '#prompt-textarea, div[contenteditable="true"][id="prompt-textarea"], div.ProseMirror[contenteditable="true"]',
+      submitButtonSelector: 'button[data-testid="send-button"], button[aria-label*="Send"], form button:not([disabled])',
+      responseContainerSelector: '[data-message-author-role="assistant"], div[data-message-author-role="assistant"]',
+      responseTextSelector: '.markdown, .prose, .whitespace-pre-wrap',
+      loadingIndicatorSelector: '.result-streaming, [data-testid="stop-button"], .animate-spin',
     };
   }
 
@@ -62,10 +62,53 @@ export class ChatGPTAdapter extends BaseProviderAdapter {
     }
   }
 
+  async submitQuery(query: string): Promise<void> {
+    const selectors = this.getSelectors();
+    const inputElement = await waitForElement(selectors.textareaSelector);
+
+    // ChatGPT uses a contenteditable div (ProseMirror style)
+    if (inputElement.getAttribute('contenteditable') === 'true') {
+      // Focus the element
+      (inputElement as HTMLElement).focus();
+
+      // Clear existing content and set new text
+      // ProseMirror typically has a <p> inside, or we set text directly
+      const paragraph = inputElement.querySelector('p');
+      if (paragraph) {
+        paragraph.textContent = query;
+      } else {
+        inputElement.textContent = query;
+      }
+
+      // Dispatch input event to notify React/ProseMirror
+      inputElement.dispatchEvent(new InputEvent('input', {
+        bubbles: true,
+        cancelable: true,
+        inputType: 'insertText',
+        data: query
+      }));
+
+      // Also dispatch a keyboard event to ensure it's picked up
+      inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+    } else {
+      // Fallback for regular textarea
+      this.setInputValue(inputElement as HTMLTextAreaElement, query);
+    }
+
+    await this.sleep(200);
+
+    // Find and click submit button
+    const submitButton = await waitForElement(selectors.submitButtonSelector);
+    await this.waitForButtonEnabled(submitButton as HTMLButtonElement);
+    (submitButton as HTMLButtonElement).click();
+
+    this.queryStartTime = Date.now();
+  }
+
   isLoggedIn(): boolean {
     // Check for login button or other indicators
     const loginButton = document.querySelector('[data-testid="login-button"]');
-    const userMenu = document.querySelector('[data-testid="user-menu"], .avatar');
+    const userMenu = document.querySelector('[data-testid="user-menu"], .avatar, [data-testid="profile-button"]');
     return !loginButton && !!userMenu;
   }
 

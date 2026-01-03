@@ -63,6 +63,9 @@ export abstract class BaseProviderAdapter implements IProviderAdapter {
     const selectors = this.getSelectors();
     const startTime = Date.now();
 
+    // Get initial response count to detect new responses
+    const initialResponseCount = document.querySelectorAll(selectors.responseContainerSelector).length;
+
     // Wait for loading indicator to appear (if it exists)
     if (selectors.loadingIndicatorSelector) {
       try {
@@ -78,15 +81,40 @@ export abstract class BaseProviderAdapter implements IProviderAdapter {
           timeoutMs - (Date.now() - startTime)
         );
       } catch {
-        throw new Error('Response timeout: still loading');
+        // Don't throw here - try to get response anyway
+        console.log('Loading indicator timeout, trying to get response anyway');
       }
     }
 
     // Wait a bit for final content to settle
     await this.sleep(500);
 
-    // Extract and return the response
-    const response = this.extractResponseText();
+    // Try to extract response
+    let response = this.extractResponseText();
+
+    // If no response found, poll for content changes
+    if (!response) {
+      const pollInterval = 500;
+      const maxPollTime = Math.min(30000, timeoutMs - (Date.now() - startTime));
+      const pollEndTime = Date.now() + maxPollTime;
+
+      while (Date.now() < pollEndTime) {
+        await this.sleep(pollInterval);
+
+        // Check if we have more responses now
+        const currentResponseCount = document.querySelectorAll(selectors.responseContainerSelector).length;
+        if (currentResponseCount > initialResponseCount) {
+          await this.sleep(1000); // Wait for streaming to complete
+          response = this.extractResponseText();
+          if (response) break;
+        }
+
+        // Try extracting anyway
+        response = this.extractResponseText();
+        if (response) break;
+      }
+    }
+
     if (!response) {
       throw new Error('No response received');
     }
