@@ -41,8 +41,8 @@ export function App() {
         stats: {
           totalQueries: 0,
           totalRatings: 0,
-          averageByProvider: {},
-          winsByProvider: {},
+          thumbsUpByProvider: {},
+          thumbsDownByProvider: {},
         },
       });
       alert('History cleared!');

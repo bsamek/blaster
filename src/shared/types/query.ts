@@ -25,7 +25,7 @@ export interface QuerySession {
 export interface Rating {
   queryId: string;
   providerId: ProviderId;
-  score: number; // 1-5 stars
+  vote: 'up' | 'down';
   timestamp: number;
   notes?: string;
 }

@@ -12,8 +12,8 @@ export interface UserPreferences {
 export interface RatingStats {
   totalQueries: number;
   totalRatings: number;
-  averageByProvider: Partial<Record<ProviderId, number>>;
-  winsByProvider: Partial<Record<ProviderId, number>>;
+  thumbsUpByProvider: Partial<Record<ProviderId, number>>;
+  thumbsDownByProvider: Partial<Record<ProviderId, number>>;
 }
 
 export interface StorageSchema {
@@ -36,6 +36,6 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
 export const DEFAULT_STATS: RatingStats = {
   totalQueries: 0,
   totalRatings: 0,
-  averageByProvider: {},
-  winsByProvider: {},
+  thumbsUpByProvider: {},
+  thumbsDownByProvider: {},
 };

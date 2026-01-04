@@ -216,8 +216,8 @@ export class QueryOrchestrator {
     const stats: RatingStats = statsResult.stats || {
       totalQueries: 0,
       totalRatings: 0,
-      averageByProvider: {},
-      winsByProvider: {},
+      thumbsUpByProvider: {},
+      thumbsDownByProvider: {},
     };
     stats.totalQueries++;
     await chrome.storage.local.set({ stats });

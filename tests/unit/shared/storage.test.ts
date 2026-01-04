@@ -53,7 +53,7 @@ describe('Storage', () => {
       const rating = {
         queryId: 'test-id',
         providerId: 'chatgpt',
-        score: 5,
+        vote: 'up' as const,
         timestamp: Date.now(),
       };
 
@@ -61,7 +61,7 @@ describe('Storage', () => {
 
       const result = await chrome.storage.local.get('ratings');
       expect(result.ratings).toHaveLength(1);
-      expect(result.ratings[0].score).toBe(5);
+      expect(result.ratings[0].vote).toBe('up');
     });
   });
 
@@ -80,13 +80,15 @@ describe('Storage', () => {
           ...DEFAULT_STATS,
           totalQueries: 5,
           totalRatings: 10,
-          averageByProvider: { chatgpt: 4.5 },
+          thumbsUpByProvider: { chatgpt: 8 },
+          thumbsDownByProvider: { chatgpt: 2 },
         },
       });
 
       const result = await chrome.storage.local.get('stats');
       expect(result.stats.totalQueries).toBe(5);
-      expect(result.stats.averageByProvider.chatgpt).toBe(4.5);
+      expect(result.stats.thumbsUpByProvider.chatgpt).toBe(8);
+      expect(result.stats.thumbsDownByProvider.chatgpt).toBe(2);
     });
   });
 });

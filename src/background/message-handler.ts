@@ -116,7 +116,7 @@ export class MessageHandler {
     payload: {
       queryId: string;
       providerId: ProviderId;
-      score: number;
+      vote: 'up' | 'down';
       notes?: string;
     },
     sendResponse: (response: unknown) => void
@@ -125,7 +125,7 @@ export class MessageHandler {
       const rating: Rating = {
         queryId: payload.queryId,
         providerId: payload.providerId,
-        score: payload.score,
+        vote: payload.vote,
         timestamp: Date.now(),
         notes: payload.notes,
       };
@@ -135,7 +135,15 @@ export class MessageHandler {
         ratings?: Rating[];
         stats?: RatingStats;
       };
-      const ratings: Rating[] = result.ratings || [];
+
+      // Filter out any existing rating for this query/provider combination
+      const existingRatings: Rating[] = result.ratings || [];
+      const existingRating = existingRatings.find(
+        (r) => r.queryId === payload.queryId && r.providerId === payload.providerId
+      );
+      const ratings = existingRatings.filter(
+        (r) => !(r.queryId === payload.queryId && r.providerId === payload.providerId)
+      );
       ratings.push(rating);
       await chrome.storage.local.set({ ratings });
 
@@ -143,31 +151,32 @@ export class MessageHandler {
       const stats: RatingStats = result.stats || {
         totalQueries: 0,
         totalRatings: 0,
-        averageByProvider: {},
-        winsByProvider: {},
+        thumbsUpByProvider: {},
+        thumbsDownByProvider: {},
       };
 
-      stats.totalRatings++;
-
-      // Calculate new average for provider
-      const providerRatings = ratings.filter(
-        (r) => r.providerId === payload.providerId
-      );
-      const average =
-        providerRatings.reduce((sum, r) => sum + r.score, 0) /
-        providerRatings.length;
-      stats.averageByProvider[payload.providerId] = average;
-
-      // Check if this is the highest rated for the query
-      const queryRatings = ratings.filter((r) => r.queryId === payload.queryId);
-      if (queryRatings.length > 0) {
-        const maxScore = Math.max(...queryRatings.map((r) => r.score));
-        const winners = queryRatings.filter((r) => r.score === maxScore);
-        if (winners.length === 1) {
-          const winnerId = winners[0].providerId;
-          stats.winsByProvider[winnerId] =
-            (stats.winsByProvider[winnerId] || 0) + 1;
+      // If there was an existing rating, adjust the counts
+      if (existingRating) {
+        // Remove the old vote from counts
+        if (existingRating.vote === 'up') {
+          stats.thumbsUpByProvider[payload.providerId] =
+            Math.max(0, (stats.thumbsUpByProvider[payload.providerId] || 0) - 1);
+        } else {
+          stats.thumbsDownByProvider[payload.providerId] =
+            Math.max(0, (stats.thumbsDownByProvider[payload.providerId] || 0) - 1);
         }
+      } else {
+        // Only increment total if this is a new rating
+        stats.totalRatings++;
+      }
+
+      // Add the new vote to counts
+      if (payload.vote === 'up') {
+        stats.thumbsUpByProvider[payload.providerId] =
+          (stats.thumbsUpByProvider[payload.providerId] || 0) + 1;
+      } else {
+        stats.thumbsDownByProvider[payload.providerId] =
+          (stats.thumbsDownByProvider[payload.providerId] || 0) + 1;
       }
 
       await chrome.storage.local.set({ stats });
@@ -205,8 +214,8 @@ export class MessageHandler {
         stats: result.stats || {
           totalQueries: 0,
           totalRatings: 0,
-          averageByProvider: {},
-          winsByProvider: {},
+          thumbsUpByProvider: {},
+          thumbsDownByProvider: {},
         },
       });
     } catch (error) {
