@@ -21,8 +21,8 @@ export function App() {
   const [stats, setStats] = useState<RatingStats>({
     totalQueries: 0,
     totalRatings: 0,
-    averageByProvider: {},
-    winsByProvider: {},
+    thumbsUpByProvider: {},
+    thumbsDownByProvider: {},
   });
 
   useEffect(() => {
@@ -70,11 +70,11 @@ export function App() {
   const handleRate = async (
     queryId: string,
     providerId: ProviderId,
-    score: number
+    vote: 'up' | 'down'
   ) => {
     await chrome.runtime.sendMessage({
       type: 'SAVE_RATING',
-      payload: { queryId, providerId, score },
+      payload: { queryId, providerId, vote },
       timestamp: Date.now(),
     });
 
@@ -83,18 +83,18 @@ export function App() {
       ...prev.filter(
         (r) => !(r.queryId === queryId && r.providerId === providerId)
       ),
-      { queryId, providerId, score, timestamp: Date.now() },
+      { queryId, providerId, vote, timestamp: Date.now() },
     ]);
 
     // Reload stats
     loadHistory();
   };
 
-  const getRating = (queryId: string, providerId: ProviderId): number => {
+  const getRating = (queryId: string, providerId: ProviderId): 'up' | 'down' | null => {
     const rating = ratings.find(
       (r) => r.queryId === queryId && r.providerId === providerId
     );
-    return rating?.score || 0;
+    return rating?.vote || null;
   };
 
   return (
@@ -162,8 +162,8 @@ export function App() {
 
 interface CompareViewProps {
   sessions: QuerySession[];
-  getRating: (queryId: string, providerId: ProviderId) => number;
-  onRate: (queryId: string, providerId: ProviderId, score: number) => void;
+  getRating: (queryId: string, providerId: ProviderId) => 'up' | 'down' | null;
+  onRate: (queryId: string, providerId: ProviderId, vote: 'up' | 'down') => void;
 }
 
 function CompareView({ sessions, getRating, onRate }: CompareViewProps) {
@@ -215,8 +215,8 @@ function CompareView({ sessions, getRating, onRate }: CompareViewProps) {
 interface ResponseCardProps {
   providerId: ProviderId;
   response?: QueryResponse;
-  rating: number;
-  onRate: (score: number) => void;
+  rating: 'up' | 'down' | null;
+  onRate: (vote: 'up' | 'down') => void;
 }
 
 function ResponseCard({
@@ -260,32 +260,31 @@ function ResponseCard({
 }
 
 interface RatingControlsProps {
-  rating: number;
-  onRate: (score: number) => void;
+  rating: 'up' | 'down' | null;
+  onRate: (vote: 'up' | 'down') => void;
 }
 
 function RatingControls({ rating, onRate }: RatingControlsProps) {
-  const [hoveredStar, setHoveredStar] = useState(0);
-
   return (
     <div className="rating-section">
       <span className="rating-label">Rate:</span>
-      <div className="stars">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            className={`star-button ${
-              star <= (hoveredStar || rating) ? 'filled' : 'empty'
-            }`}
-            onClick={() => onRate(star)}
-            onMouseEnter={() => setHoveredStar(star)}
-            onMouseLeave={() => setHoveredStar(0)}
-          >
-            ★
-          </button>
-        ))}
+      <div className="thumbs">
+        <button
+          className={`thumb-button ${rating === 'up' ? 'selected' : ''}`}
+          onClick={() => onRate('up')}
+          title="Thumbs up"
+        >
+          👍
+        </button>
+        <button
+          className={`thumb-button ${rating === 'down' ? 'selected' : ''}`}
+          onClick={() => onRate('down')}
+          title="Thumbs down"
+        >
+          👎
+        </button>
       </div>
-      {rating > 0 && <span className="rating-saved">Saved</span>}
+      {rating && <span className="rating-saved">Saved</span>}
     </div>
   );
 }
@@ -358,13 +357,10 @@ function StatsView({ stats }: StatsViewProps) {
             </div>
             <div className="provider-stat-values">
               <span>
-                Avg:{' '}
-                <strong>
-                  {(stats.averageByProvider[providerId] || 0).toFixed(1)}★
-                </strong>
+                👍 <strong>{stats.thumbsUpByProvider[providerId] || 0}</strong>
               </span>
               <span>
-                Wins: <strong>{stats.winsByProvider[providerId] || 0}</strong>
+                👎 <strong>{stats.thumbsDownByProvider[providerId] || 0}</strong>
               </span>
             </div>
           </div>

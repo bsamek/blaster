@@ -55,7 +55,7 @@ export interface SessionUpdateMessage extends BaseMessage<'SESSION_UPDATE', {
 export interface SaveRatingMessage extends BaseMessage<'SAVE_RATING', {
   queryId: string;
   providerId: ProviderId;
-  score: number;
+  vote: 'up' | 'down';
   notes?: string;
 }> {}
 

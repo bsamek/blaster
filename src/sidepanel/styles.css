@@ -242,31 +242,33 @@ body {
   color: #6b7280;
 }
 
-.stars {
+.thumbs {
   display: flex;
-  gap: 4px;
+  gap: 8px;
 }
 
-.star-button {
-  width: 24px;
-  height: 24px;
-  border: none;
-  background: transparent;
+.thumb-button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #f9fafb;
   cursor: pointer;
   font-size: 18px;
-  transition: transform 0.1s;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.star-button:hover {
-  transform: scale(1.2);
+.thumb-button:hover {
+  transform: scale(1.1);
+  background: #f3f4f6;
 }
 
-.star-button.filled {
-  color: #f59e0b;
-}
-
-.star-button.empty {
-  color: #d1d5db;
+.thumb-button.selected {
+  background: #dbeafe;
+  border-color: #2563eb;
 }
 
 .rating-saved {
