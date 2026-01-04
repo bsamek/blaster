@@ -33,3 +33,6 @@ npm-debug.log*
 *.crx
 *.pem
 *.zip
+
+# Claude Code
+.claude/
