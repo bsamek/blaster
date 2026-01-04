@@ -9,7 +9,7 @@ export class ClaudeAdapter extends BaseProviderAdapter {
     return {
       // Claude uses a contenteditable div (ProseMirror)
       textareaSelector: 'div[contenteditable="true"].ProseMirror, div.ProseMirror[contenteditable="true"], fieldset div[contenteditable="true"]',
-      submitButtonSelector: 'button[aria-label*="Send"], button[aria-label*="send message"], fieldset button:not([disabled])',
+      submitButtonSelector: 'button[aria-label="Send message"], button[aria-label*="Send"]:not([aria-label="Toggle menu"])',
       // Claude's response containers - look for assistant/Claude messages
       responseContainerSelector: '[data-is-streaming], div[class*="font-claude"], div.prose, div[data-testid*="message"]',
       responseTextSelector: '.prose, .whitespace-pre-wrap, p, span',
@@ -93,6 +93,44 @@ export class ClaudeAdapter extends BaseProviderAdapter {
     this.queryStartTime = Date.now();
   }
 
+  // Override waitForResponse with Claude-specific streaming detection
+  async waitForResponse(timeoutMs = 60000): Promise<string> {
+    const startTime = Date.now();
+
+    // Wait for streaming to complete by checking for data-is-streaming="false"
+    // This is more reliable than waiting for "true" to disappear
+    while (Date.now() - startTime < timeoutMs) {
+      // Check if there's a completed response (streaming = false)
+      const completedResponse = document.querySelector('[data-is-streaming="false"]');
+      if (completedResponse) {
+        // Wait a bit for final content to settle
+        await this.sleep(300);
+        const response = this.extractResponseText();
+        if (response) {
+          return response;
+        }
+      }
+
+      // Check if still streaming
+      const stillStreaming = document.querySelector('[data-is-streaming="true"]');
+      if (!stillStreaming && !completedResponse) {
+        // Neither streaming nor completed - might be initial state, keep waiting
+        await this.sleep(200);
+        continue;
+      }
+
+      await this.sleep(200);
+    }
+
+    // Final attempt to extract response
+    const response = this.extractResponseText();
+    if (response) {
+      return response;
+    }
+
+    throw new Error('No response received from Claude');
+  }
+
   isLoggedIn(): boolean {
     // Check for user avatar or menu
     const userMenu = document.querySelector('[data-testid="user-menu"], .user-avatar, nav button');
@@ -106,58 +144,44 @@ export class ClaudeAdapter extends BaseProviderAdapter {
   }
 
   getResponse(): string | null {
-    // Try multiple strategies to find Claude's response
-    const selectors = this.getSelectors();
-
-    // Strategy 1: Look for specific response containers (Claude/assistant messages)
-    let containers = document.querySelectorAll(selectors.responseContainerSelector);
-
-    // Strategy 2: Look for Claude-specific response elements (avoid human messages)
-    if (containers.length === 0) {
-      containers = document.querySelectorAll(
-        'div[class*="font-claude"], div[class*="assistant"], div[class*="claude-message"]'
-      );
+    // Strategy 1: Look for completed streaming response (most reliable)
+    const completedContainer = document.querySelector('[data-is-streaming="false"]');
+    if (completedContainer) {
+      // Find the font-claude-response div inside, which contains the actual response
+      const responseDiv = completedContainer.querySelector('div[class*="font-claude-response"]');
+      if (responseDiv) {
+        return responseDiv.textContent?.trim() || null;
+      }
+      // Fallback to container text
+      return completedContainer.textContent?.trim() || null;
     }
 
-    // Strategy 3: Look in conversation area for prose that's NOT in a human/user message
-    if (containers.length === 0) {
-      const conversationArea = document.querySelector('main, [role="main"], .conversation');
-      if (conversationArea) {
-        // Get all prose elements that are NOT inside human/user message containers
-        const proseElements = conversationArea.querySelectorAll('div.prose');
-        const filtered: Element[] = [];
-        proseElements.forEach((el) => {
-          const parent = el.closest('.human-message, .user-message, [data-author="user"]');
-          if (!parent) {
-            filtered.push(el);
-          }
-        });
-        if (filtered.length > 0) {
-          containers = filtered as unknown as NodeListOf<Element>;
+    // Strategy 2: Look for font-claude elements (fallback)
+    const fontClaudeElements = document.querySelectorAll('div[class*="font-claude-response"]');
+    if (fontClaudeElements.length > 0) {
+      const lastElement = fontClaudeElements[fontClaudeElements.length - 1];
+      return lastElement.textContent?.trim() || null;
+    }
+
+    // Strategy 3: Look for any font-claude class elements
+    const allFontClaude = document.querySelectorAll('div[class*="font-claude"]');
+    if (allFontClaude.length > 0) {
+      // Filter out small utility elements, get the largest content
+      let bestMatch: Element | null = null;
+      let maxLength = 0;
+      allFontClaude.forEach((el) => {
+        const text = el.textContent || '';
+        if (text.length > maxLength) {
+          maxLength = text.length;
+          bestMatch = el;
         }
+      });
+      if (bestMatch) {
+        return (bestMatch as Element).textContent?.trim() || null;
       }
     }
 
-    if (containers.length === 0) return null;
-
-    // Get the last container (most recent response)
-    const lastContainer = Array.isArray(containers)
-      ? containers[containers.length - 1]
-      : containers[containers.length - 1];
-
-    const textElements = lastContainer.querySelectorAll(selectors.responseTextSelector);
-
-    // Combine all text from prose elements
-    let text = '';
-    if (textElements.length > 0) {
-      textElements.forEach((el: Element) => {
-        text += el.textContent + '\n';
-      });
-    } else {
-      text = lastContainer.textContent || '';
-    }
-
-    return text.trim() || null;
+    return null;
   }
 
   protected extractResponseText(): string {

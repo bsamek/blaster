@@ -9,7 +9,7 @@ export class ChatGPTAdapter extends BaseProviderAdapter {
     return {
       // ChatGPT uses a contenteditable div (ProseMirror) in newer versions
       textareaSelector: '#prompt-textarea, div[contenteditable="true"][id="prompt-textarea"], div.ProseMirror[contenteditable="true"]',
-      submitButtonSelector: 'button[data-testid="send-button"], button[aria-label*="Send"], form button:not([disabled])',
+      submitButtonSelector: 'button[data-testid="send-button"], button[aria-label="Send prompt"], button.composer-submit-btn',
       responseContainerSelector: '[data-message-author-role="assistant"], div[data-message-author-role="assistant"]',
       responseTextSelector: '.markdown, .prose, .whitespace-pre-wrap',
       loadingIndicatorSelector: '.result-streaming, [data-testid="stop-button"], .animate-spin',
