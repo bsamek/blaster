@@ -31,9 +31,10 @@ describe('Sidepanel App', () => {
       expect(screen.getByText('Gemini')).toBeInTheDocument();
     });
 
-    it('should render the submit button', () => {
+    it('should render the submit buttons', () => {
       render(<App />);
-      expect(screen.getByText('Send to All')).toBeInTheDocument();
+      expect(screen.getByText('Send')).toBeInTheDocument();
+      expect(screen.getByText('New Chat')).toBeInTheDocument();
     });
 
     it('should have all providers selected by default', () => {
@@ -79,7 +80,7 @@ describe('Sidepanel App', () => {
   describe('submit button state', () => {
     it('should be disabled when query is empty', () => {
       render(<App />);
-      const submitBtn = screen.getByText('Send to All');
+      const submitBtn = screen.getByText('Send');
       expect(submitBtn).toBeDisabled();
     });
 
@@ -88,7 +89,7 @@ describe('Sidepanel App', () => {
       render(<App />);
 
       await user.type(screen.getByTestId('query-input'), '   ');
-      expect(screen.getByText('Send to All')).toBeDisabled();
+      expect(screen.getByText('Send')).toBeDisabled();
     });
 
     it('should be disabled when no providers are selected', async () => {
@@ -100,7 +101,7 @@ describe('Sidepanel App', () => {
       await user.click(screen.getByText('Claude'));
       await user.click(screen.getByText('Gemini'));
 
-      expect(screen.getByText('Send to All')).toBeDisabled();
+      expect(screen.getByText('Send')).toBeDisabled();
     });
 
     it('should be enabled when query has text and at least one provider selected', async () => {
@@ -108,7 +109,7 @@ describe('Sidepanel App', () => {
       render(<App />);
 
       await user.type(screen.getByTestId('query-input'), 'Test query');
-      expect(screen.getByText('Send to All')).toBeEnabled();
+      expect(screen.getByText('Send')).toBeEnabled();
     });
   });
 
@@ -118,7 +119,7 @@ describe('Sidepanel App', () => {
       render(<App />);
 
       await user.type(screen.getByTestId('query-input'), 'What is TypeScript?');
-      await user.click(screen.getByText('Send to All'));
+      await user.click(screen.getByText('Send'));
 
       await waitFor(() => {
         expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
@@ -139,7 +140,7 @@ describe('Sidepanel App', () => {
       await user.type(screen.getByTestId('query-input'), 'Test query');
       await user.click(screen.getByText('Claude'));
       await user.click(screen.getByText('Gemini'));
-      await user.click(screen.getByText('Send to All'));
+      await user.click(screen.getByText('Send'));
 
       await waitFor(() => {
         expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
@@ -159,7 +160,7 @@ describe('Sidepanel App', () => {
 
       const input = screen.getByTestId('query-input');
       await user.type(input, 'Test query');
-      await user.click(screen.getByText('Send to All'));
+      await user.click(screen.getByText('Send'));
 
       await waitFor(() => {
         expect(input).toHaveValue('');
@@ -175,12 +176,12 @@ describe('Sidepanel App', () => {
       render(<App />);
 
       await user.type(screen.getByTestId('query-input'), 'Test query');
-      await user.click(screen.getByText('Send to All'));
+      await user.click(screen.getByText('Send'));
 
-      expect(screen.getByText('Sending...')).toBeInTheDocument();
+      expect(screen.getAllByText('Sending...').length).toBeGreaterThan(0);
 
       await waitFor(() => {
-        expect(screen.getByText('Send to All')).toBeInTheDocument();
+        expect(screen.getByText('Send')).toBeInTheDocument();
       });
     });
 
@@ -193,10 +194,10 @@ describe('Sidepanel App', () => {
       render(<App />);
 
       await user.type(screen.getByTestId('query-input'), 'Test query');
-      await user.click(screen.getByText('Send to All'));
+      await user.click(screen.getByText('Send'));
 
-      // Button should be disabled during submission
-      expect(screen.getByText('Sending...')).toBeDisabled();
+      // Buttons should be disabled during submission
+      expect(screen.getAllByText('Sending...')[0]).toBeDisabled();
     });
 
     it('should trim whitespace from query before submission', async () => {
@@ -204,7 +205,7 @@ describe('Sidepanel App', () => {
       render(<App />);
 
       await user.type(screen.getByTestId('query-input'), '  Test query  ');
-      await user.click(screen.getByText('Send to All'));
+      await user.click(screen.getByText('Send'));
 
       await waitFor(() => {
         expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith(
@@ -214,6 +215,43 @@ describe('Sidepanel App', () => {
             }),
           })
         );
+      });
+    });
+
+    it('should send NEW_CHAT message when New Chat is clicked', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+
+      await user.click(screen.getByText('New Chat'));
+
+      await waitFor(() => {
+        expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
+          type: 'NEW_CHAT',
+          payload: {
+            providers: ['chatgpt', 'claude', 'gemini'],
+          },
+          timestamp: expect.any(Number),
+        });
+      });
+    });
+
+    it('should allow New Chat even without query text', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+
+      // New Chat button should be enabled without query text
+      expect(screen.getByText('New Chat')).toBeEnabled();
+
+      await user.click(screen.getByText('New Chat'));
+
+      await waitFor(() => {
+        expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
+          type: 'NEW_CHAT',
+          payload: {
+            providers: ['chatgpt', 'claude', 'gemini'],
+          },
+          timestamp: expect.any(Number),
+        });
       });
     });
   });

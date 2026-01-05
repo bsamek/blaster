@@ -143,6 +143,45 @@ export class TabManager {
     return newTab.id;
   }
 
+  async openNewChats(providers: ProviderId[]): Promise<void> {
+    await Promise.all(providers.map((providerId) => this.openNewChat(providerId)));
+  }
+
+  private async openNewChat(providerId: ProviderId): Promise<void> {
+    const config = PROVIDERS[providerId];
+    const existingTab = this.tabs.get(providerId);
+
+    if (existingTab) {
+      try {
+        await chrome.tabs.get(existingTab.tabId);
+        // Navigate existing tab to new chat URL
+        await chrome.tabs.update(existingTab.tabId, {
+          url: config.newChatUrl,
+          active: true,
+        });
+        existingTab.isReady = false;
+        return;
+      } catch {
+        this.tabs.delete(providerId);
+      }
+    }
+
+    // No existing tab, create a new one with newChatUrl
+    const newTab = await chrome.tabs.create({
+      url: config.newChatUrl,
+      active: true,
+    });
+
+    if (newTab.id) {
+      this.tabs.set(providerId, {
+        tabId: newTab.id,
+        providerId,
+        isReady: false,
+        isLoggedIn: false,
+      });
+    }
+  }
+
   getTabId(providerId: ProviderId): number | null {
     return this.tabs.get(providerId)?.tabId ?? null;
   }

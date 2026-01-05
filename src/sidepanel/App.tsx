@@ -57,6 +57,18 @@ export function App() {
     }
   };
 
+  const handleNewChat = async () => {
+    if (selectedProviders.length === 0) return;
+
+    await chrome.runtime.sendMessage({
+      type: 'NEW_CHAT',
+      payload: {
+        providers: selectedProviders,
+      },
+      timestamp: Date.now(),
+    });
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       handleSubmit();
@@ -91,13 +103,22 @@ export function App() {
             </button>
           ))}
         </div>
-        <button
-          className="submit-button"
-          onClick={handleSubmit}
-          disabled={!query.trim() || selectedProviders.length === 0 || isSubmitting}
-        >
-          {isSubmitting ? 'Sending...' : 'Send to All'}
-        </button>
+        <div className="submit-buttons-row">
+          <button
+            className="submit-button"
+            onClick={handleSubmit}
+            disabled={!query.trim() || selectedProviders.length === 0 || isSubmitting}
+          >
+            {isSubmitting ? 'Sending...' : 'Send'}
+          </button>
+          <button
+            className="submit-button secondary"
+            onClick={handleNewChat}
+            disabled={selectedProviders.length === 0}
+          >
+            New Chat
+          </button>
+        </div>
       </div>
     </div>
   );
