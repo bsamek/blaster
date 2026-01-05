@@ -30,7 +30,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://claude.ai/", "https://claude.ai/chat/*"],
+      "matches": ["https://claude.ai/", "https://claude.ai/new", "https://claude.ai/chat/*"],
       "js": ["src/content-scripts/providers/claude.ts"],
       "run_at": "document_idle"
     },
