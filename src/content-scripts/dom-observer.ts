@@ -28,10 +28,6 @@ export class DOMObserver {
     }
     this.callback = null;
   }
-
-  takeRecords(): MutationRecord[] {
-    return this.observer?.takeRecords() ?? [];
-  }
 }
 
 export async function waitForElement(

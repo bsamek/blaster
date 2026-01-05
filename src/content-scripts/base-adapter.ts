@@ -6,7 +6,6 @@ export abstract class BaseProviderAdapter implements IProviderAdapter {
 
   protected observer: DOMObserver;
   protected isInitialized = false;
-  protected currentQueryId: string | null = null;
   protected queryStartTime = 0;
 
   constructor() {
@@ -37,7 +36,6 @@ export abstract class BaseProviderAdapter implements IProviderAdapter {
   }
 
   abstract isLoggedIn(): boolean;
-  abstract hasActiveConversation(): boolean;
 
   async submitQuery(query: string): Promise<void> {
     const selectors = this.getSelectors();
