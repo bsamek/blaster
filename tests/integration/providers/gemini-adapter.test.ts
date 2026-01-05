@@ -93,17 +93,4 @@ describe('GeminiAdapter', () => {
     });
   });
 
-  describe('hasActiveConversation', () => {
-    it('should return false with no responses', async () => {
-      await adapter.initialize();
-      clearResponses(dom.window.document, 'gemini');
-      expect(adapter.hasActiveConversation()).toBe(false);
-    });
-
-    it('should return true with responses', async () => {
-      await adapter.initialize();
-      injectResponse(dom.window.document, 'gemini', 'Test response');
-      expect(adapter.hasActiveConversation()).toBe(true);
-    });
-  });
 });

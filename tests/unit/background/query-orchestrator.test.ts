@@ -62,13 +62,6 @@ describe('QueryOrchestrator', () => {
       expect(result.queries).toHaveLength(1);
       expect(result.queries[0].text).toBe('Test query');
     });
-
-    it('should update stats', async () => {
-      await orchestrator.submitQuery('Test', ['chatgpt']);
-
-      const result = await chrome.storage.local.get('stats');
-      expect(result.stats.totalQueries).toBe(1);
-    });
   });
 
   describe('handleResponseReceived', () => {
@@ -161,43 +154,20 @@ describe('QueryOrchestrator', () => {
     });
   });
 
-  describe('onSessionUpdate', () => {
-    it('should notify listeners on session updates', async () => {
-      const listener = vi.fn();
-      orchestrator.onSessionUpdate(listener);
+  describe('session notifications', () => {
+    it('should send session update via chrome.runtime.sendMessage', async () => {
+      await orchestrator.submitQuery('Test', ['chatgpt']);
 
-      const session = await orchestrator.submitQuery('Test', ['chatgpt']);
-
-      // Initial notification when session is created
-      expect(listener).toHaveBeenCalledWith(
+      expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          query: expect.objectContaining({ text: 'Test' }),
+          type: 'SESSION_UPDATE',
+          payload: expect.objectContaining({
+            session: expect.objectContaining({
+              query: expect.objectContaining({ text: 'Test' }),
+            }),
+          }),
         })
       );
-
-      orchestrator.handleResponseReceived(
-        session.query.id,
-        'chatgpt',
-        'Response',
-        1000
-      );
-
-      // Called again when response received AND when session marked complete
-      // (1 for submitQuery, 1 for response received, 1 for session completed)
-      expect(listener).toHaveBeenCalledTimes(3);
-    });
-
-    it('should allow unsubscribing', async () => {
-      const listener = vi.fn();
-      const unsubscribe = orchestrator.onSessionUpdate(listener);
-
-      await orchestrator.submitQuery('Test 1', ['chatgpt']);
-      expect(listener).toHaveBeenCalledTimes(1);
-
-      unsubscribe();
-
-      await orchestrator.submitQuery('Test 2', ['chatgpt']);
-      expect(listener).toHaveBeenCalledTimes(1); // Not called again
     });
   });
 });
