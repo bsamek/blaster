@@ -1,8 +1,15 @@
-import { useState, useEffect } from 'react';
-import type { QuerySession } from '../shared/types';
+import React, { useState, useEffect } from 'react';
+import type { ProviderId, QuerySession } from '../shared/types';
 import { PROVIDERS } from '../shared/constants';
 
 export function App() {
+  const [query, setQuery] = useState('');
+  const [selectedProviders, setSelectedProviders] = useState<ProviderId[]>([
+    'chatgpt',
+    'claude',
+    'gemini',
+  ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [sessions, setSessions] = useState<QuerySession[]>([]);
 
   useEffect(() => {
@@ -29,11 +36,75 @@ export function App() {
     return () => chrome.runtime.onMessage.removeListener(listener);
   }, []);
 
+  const toggleProvider = (providerId: ProviderId) => {
+    setSelectedProviders((prev) =>
+      prev.includes(providerId)
+        ? prev.filter((p) => p !== providerId)
+        : [...prev, providerId]
+    );
+  };
+
+  const handleSubmit = async () => {
+    if (!query.trim() || selectedProviders.length === 0) return;
+
+    setIsSubmitting(true);
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'SUBMIT_QUERY',
+        payload: {
+          text: query.trim(),
+          providers: selectedProviders,
+        },
+        timestamp: Date.now(),
+      });
+      setQuery('');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      handleSubmit();
+    }
+  };
+
   return (
     <div className="sidepanel-container">
       <header className="header">
         <h1>AI Blaster</h1>
       </header>
+
+      <div className="query-input-section">
+        <textarea
+          className="query-input"
+          placeholder="Enter your question..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          data-testid="query-input"
+        />
+        <div className="providers-row">
+          {(['chatgpt', 'claude', 'gemini'] as ProviderId[]).map((providerId) => (
+            <button
+              key={providerId}
+              className={`provider-toggle ${providerId} ${
+                selectedProviders.includes(providerId) ? 'selected' : ''
+              }`}
+              onClick={() => toggleProvider(providerId)}
+            >
+              {PROVIDERS[providerId].name}
+            </button>
+          ))}
+        </div>
+        <button
+          className="submit-button"
+          onClick={handleSubmit}
+          disabled={!query.trim() || selectedProviders.length === 0 || isSubmitting}
+        >
+          {isSubmitting ? 'Sending...' : 'Send to All'}
+        </button>
+      </div>
 
       <div className="content">
         {sessions.length === 0 ? (
@@ -41,7 +112,7 @@ export function App() {
             <div className="empty-state-icon">⚡</div>
             <div className="empty-state-title">No active queries</div>
             <div className="empty-state-text">
-              Queries sent to AI assistants will appear here.
+              Enter a question above to compare responses.
             </div>
           </div>
         ) : (
