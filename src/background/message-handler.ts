@@ -43,13 +43,14 @@ export class MessageHandler {
   }
 
   private async handleSubmitQuery(
-    payload: { queryId?: string; text: string; providers: ProviderId[] },
+    payload: { queryId?: string; text: string; providers: ProviderId[]; newChat?: boolean },
     sendResponse: (response: unknown) => void
   ): Promise<void> {
     try {
       const session = await this.orchestrator.submitQuery(
         payload.text,
-        payload.providers
+        payload.providers,
+        payload.newChat ?? false
       );
       sendResponse({ success: true, session });
     } catch (error) {

@@ -17,9 +17,10 @@ export interface BaseMessage<T extends MessageType, P = unknown> {
 }
 
 export interface SubmitQueryMessage extends BaseMessage<'SUBMIT_QUERY', {
-  queryId: string;
+  queryId?: string;
   text: string;
   providers: ProviderId[];
+  newChat?: boolean;
 }> {}
 
 export interface ResponseReceivedMessage extends BaseMessage<'RESPONSE_RECEIVED', {

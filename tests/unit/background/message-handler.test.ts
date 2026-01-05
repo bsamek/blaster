@@ -71,7 +71,8 @@ describe('MessageHandler', () => {
 
       expect(mockOrchestrator.submitQuery).toHaveBeenCalledWith(
         'What is TypeScript?',
-        ['chatgpt', 'claude']
+        ['chatgpt', 'claude'],
+        false
       );
       expect(sendResponse).toHaveBeenCalledWith({
         success: true,

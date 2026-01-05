@@ -136,8 +136,13 @@ body {
   color: #1e40af;
 }
 
+.submit-buttons-row {
+  display: flex;
+  gap: 8px;
+}
+
 .submit-button {
-  width: 100%;
+  flex: 1;
   padding: 10px 16px;
   border: none;
   border-radius: 8px;
@@ -156,6 +161,22 @@ body {
 .submit-button:disabled {
   background: #9ca3af;
   cursor: not-allowed;
+}
+
+.submit-button.secondary {
+  background: #ffffff;
+  color: #2563eb;
+  border: 1px solid #2563eb;
+}
+
+.submit-button.secondary:hover:not(:disabled) {
+  background: #eff6ff;
+}
+
+.submit-button.secondary:disabled {
+  background: #f9fafb;
+  color: #9ca3af;
+  border-color: #e5e7eb;
 }
 
 /* Rating Controls */
