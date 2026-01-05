@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { installMockChromeAPI, resetMockChromeAPI } from '@tests/mocks/chrome-api';
-import { DEFAULT_PREFERENCES, DEFAULT_STATS } from '@/shared/types';
+import { DEFAULT_PREFERENCES } from '@/shared/types';
 
 describe('Storage', () => {
   const mockChrome = installMockChromeAPI();
@@ -48,47 +48,21 @@ describe('Storage', () => {
     });
   });
 
-  describe('ratings', () => {
-    it('should store ratings', async () => {
-      const rating = {
+  describe('responses', () => {
+    it('should store responses', async () => {
+      const response = {
         queryId: 'test-id',
         providerId: 'chatgpt',
-        vote: 'up' as const,
+        text: 'TypeScript is a typed superset of JavaScript.',
         timestamp: Date.now(),
+        durationMs: 1500,
       };
 
-      await chrome.storage.local.set({ ratings: [rating] });
+      await chrome.storage.local.set({ responses: [response] });
 
-      const result = await chrome.storage.local.get('ratings');
-      expect(result.ratings).toHaveLength(1);
-      expect(result.ratings[0].vote).toBe('up');
-    });
-  });
-
-  describe('stats', () => {
-    it('should initialize with default stats', async () => {
-      await chrome.storage.local.set({ stats: DEFAULT_STATS });
-
-      const result = await chrome.storage.local.get('stats');
-      expect(result.stats.totalQueries).toBe(0);
-      expect(result.stats.totalRatings).toBe(0);
-    });
-
-    it('should update stats correctly', async () => {
-      await chrome.storage.local.set({
-        stats: {
-          ...DEFAULT_STATS,
-          totalQueries: 5,
-          totalRatings: 10,
-          thumbsUpByProvider: { chatgpt: 8 },
-          thumbsDownByProvider: { chatgpt: 2 },
-        },
-      });
-
-      const result = await chrome.storage.local.get('stats');
-      expect(result.stats.totalQueries).toBe(5);
-      expect(result.stats.thumbsUpByProvider.chatgpt).toBe(8);
-      expect(result.stats.thumbsDownByProvider.chatgpt).toBe(2);
+      const result = await chrome.storage.local.get('responses');
+      expect(result.responses).toHaveLength(1);
+      expect(result.responses[0].text).toBe('TypeScript is a typed superset of JavaScript.');
     });
   });
 });

@@ -281,20 +281,17 @@ describe('Storage Edge Cases', () => {
 
       const result = await chrome.storage.local.get('preferences');
       expect(result.preferences.defaultProviders).toEqual(['chatgpt']);
-      expect(result.preferences.theme).toBe('system'); // Unchanged
     });
 
     it('should handle empty providers array', async () => {
       const prefs = {
         ...DEFAULT_PREFERENCES,
         defaultProviders: [],
-        enabledProviders: [],
       };
       await chrome.storage.local.set({ preferences: prefs });
 
       const result = await chrome.storage.local.get('preferences');
       expect(result.preferences.defaultProviders).toEqual([]);
-      expect(result.preferences.enabledProviders).toEqual([]);
     });
   });
 

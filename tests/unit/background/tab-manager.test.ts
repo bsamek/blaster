@@ -5,19 +5,13 @@ import { installMockChromeAPI, resetMockChromeAPI } from '@tests/mocks/chrome-ap
 describe('TabManager', () => {
   const mockChrome = installMockChromeAPI();
   let tabManager: TabManager;
-  let onUpdatedCallback: (tabId: number, changeInfo: { status?: string }, tab: chrome.tabs.Tab) => void;
-  let onRemovedCallback: (tabId: number) => void;
 
   beforeEach(() => {
     resetMockChromeAPI(mockChrome);
 
     // Capture the listeners that TabManager registers
-    mockChrome.tabs.onUpdated.addListener.mockImplementation((callback) => {
-      onUpdatedCallback = callback;
-    });
-    mockChrome.tabs.onRemoved.addListener.mockImplementation((callback) => {
-      onRemovedCallback = callback;
-    });
+    mockChrome.tabs.onUpdated.addListener.mockImplementation(() => {});
+    mockChrome.tabs.onRemoved.addListener.mockImplementation(() => {});
 
     tabManager = new TabManager();
   });
@@ -137,30 +131,6 @@ describe('TabManager', () => {
       tabManager.onTabRemoved(201);
 
       expect(tabManager.getTabId('chatgpt')).toBeNull();
-    });
-
-    it('should notify status listeners when tab is removed', () => {
-      mockChrome.tabs.sendMessage.mockResolvedValue({ isReady: true, isLoggedIn: true });
-
-      const listener = vi.fn();
-      tabManager.onStatusChange(listener);
-
-      // Add a tab
-      tabManager.onTabUpdated(
-        202,
-        { status: 'complete' },
-        { id: 202, url: 'https://claude.ai/' } as chrome.tabs.Tab
-      );
-
-      // Remove it
-      tabManager.onTabRemoved(202);
-
-      expect(listener).toHaveBeenCalledWith({
-        providerId: 'claude',
-        isConnected: false,
-        isLoggedIn: false,
-        isReady: false,
-      });
     });
 
     it('should not affect other tabs when removing untracked tab', () => {
@@ -293,56 +263,9 @@ describe('TabManager', () => {
     });
   });
 
-  describe('onStatusChange', () => {
-    it('should register and call status listeners', async () => {
-      mockChrome.tabs.sendMessage.mockResolvedValue({ isReady: true, isLoggedIn: true });
-
-      const listener = vi.fn();
-      tabManager.onStatusChange(listener);
-
-      tabManager.onTabUpdated(
-        501,
-        { status: 'complete' },
-        { id: 501, url: 'https://chatgpt.com/' } as chrome.tabs.Tab
-      );
-
-      // Wait for ping
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(listener).toHaveBeenCalledWith(
-        expect.objectContaining({
-          providerId: 'chatgpt',
-          isConnected: true,
-        })
-      );
-    });
-
-    it('should allow unsubscribing', async () => {
-      mockChrome.tabs.sendMessage.mockResolvedValue({ isReady: true, isLoggedIn: true });
-
-      const listener = vi.fn();
-      const unsubscribe = tabManager.onStatusChange(listener);
-
-      unsubscribe();
-
-      tabManager.onTabUpdated(
-        502,
-        { status: 'complete' },
-        { id: 502, url: 'https://chatgpt.com/' } as chrome.tabs.Tab
-      );
-
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(listener).not.toHaveBeenCalled();
-    });
-  });
-
   describe('updateTabStatus', () => {
-    it('should update status and notify listeners', () => {
+    it('should update status for tracked provider', () => {
       mockChrome.tabs.sendMessage.mockResolvedValue({ isReady: false, isLoggedIn: false });
-
-      const listener = vi.fn();
-      tabManager.onStatusChange(listener);
 
       // First add the tab
       tabManager.onTabUpdated(
@@ -351,27 +274,17 @@ describe('TabManager', () => {
         { id: 601, url: 'https://chatgpt.com/' } as chrome.tabs.Tab
       );
 
-      listener.mockClear();
-
       // Update status
       tabManager.updateTabStatus('chatgpt', true, true);
 
-      expect(listener).toHaveBeenCalledWith({
-        providerId: 'chatgpt',
-        isConnected: true,
-        isLoggedIn: true,
-        isReady: true,
-        tabId: 601,
-      });
+      const status = tabManager.getStatus('chatgpt');
+      expect(status.isReady).toBe(true);
+      expect(status.isLoggedIn).toBe(true);
     });
 
-    it('should not update status for untracked provider', () => {
-      const listener = vi.fn();
-      tabManager.onStatusChange(listener);
-
-      tabManager.updateTabStatus('chatgpt', true, true);
-
-      expect(listener).not.toHaveBeenCalled();
+    it('should not throw for untracked provider', () => {
+      // Should not throw
+      expect(() => tabManager.updateTabStatus('chatgpt', true, true)).not.toThrow();
     });
   });
 });

@@ -9,7 +9,6 @@ class TestAdapter extends BaseProviderAdapter {
   readonly providerId: ProviderId = 'chatgpt';
 
   private _isLoggedIn = true;
-  private _hasActiveConversation = false;
   private _responseText = '';
   private _waitForDOMReadyCalled = false;
   private _setupEventListenersCalled = false;
@@ -41,10 +40,6 @@ class TestAdapter extends BaseProviderAdapter {
     return this._isLoggedIn;
   }
 
-  hasActiveConversation(): boolean {
-    return this._hasActiveConversation;
-  }
-
   getResponse(): string | null {
     return this._responseText || null;
   }
@@ -56,10 +51,6 @@ class TestAdapter extends BaseProviderAdapter {
   // Test helpers
   __setLoggedIn(value: boolean): void {
     this._isLoggedIn = value;
-  }
-
-  __setHasActiveConversation(value: boolean): void {
-    this._hasActiveConversation = value;
   }
 
   __setResponseText(value: string): void {
@@ -263,16 +254,6 @@ describe('BaseProviderAdapter', () => {
 
       adapter.__setLoggedIn(false);
       expect(adapter.isLoggedIn()).toBe(false);
-    });
-  });
-
-  describe('hasActiveConversation', () => {
-    it('should return value from concrete implementation', async () => {
-      adapter.__setHasActiveConversation(false);
-      expect(adapter.hasActiveConversation()).toBe(false);
-
-      adapter.__setHasActiveConversation(true);
-      expect(adapter.hasActiveConversation()).toBe(true);
     });
   });
 
