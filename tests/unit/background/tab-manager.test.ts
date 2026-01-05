@@ -221,6 +221,59 @@ describe('TabManager', () => {
     });
   });
 
+  describe('openNewChats', () => {
+    it('should navigate existing tab to newChatUrl', async () => {
+      mockChrome.tabs.sendMessage.mockResolvedValue({ isReady: true, isLoggedIn: true });
+      mockChrome.tabs.get = vi.fn().mockResolvedValue({ id: 401 });
+      mockChrome.tabs.update.mockResolvedValue({ id: 401 });
+
+      // Add a tab
+      tabManager.onTabUpdated(
+        401,
+        { status: 'complete' },
+        { id: 401, url: 'https://claude.ai/chat/123' } as chrome.tabs.Tab
+      );
+
+      await tabManager.openNewChats(['claude']);
+
+      expect(mockChrome.tabs.update).toHaveBeenCalledWith(401, {
+        url: 'https://claude.ai/new',
+        active: true,
+      });
+    });
+
+    it('should create new tab with newChatUrl when no existing tab', async () => {
+      mockChrome.tabs.create.mockResolvedValue({ id: 402 });
+
+      await tabManager.openNewChats(['claude']);
+
+      expect(mockChrome.tabs.create).toHaveBeenCalledWith({
+        url: 'https://claude.ai/new',
+        active: true,
+      });
+    });
+
+    it('should open new chats for multiple providers', async () => {
+      mockChrome.tabs.create.mockResolvedValue({ id: 403 });
+
+      await tabManager.openNewChats(['chatgpt', 'claude', 'gemini']);
+
+      expect(mockChrome.tabs.create).toHaveBeenCalledTimes(3);
+      expect(mockChrome.tabs.create).toHaveBeenCalledWith({
+        url: 'https://chatgpt.com/',
+        active: true,
+      });
+      expect(mockChrome.tabs.create).toHaveBeenCalledWith({
+        url: 'https://claude.ai/new',
+        active: true,
+      });
+      expect(mockChrome.tabs.create).toHaveBeenCalledWith({
+        url: 'https://gemini.google.com/app',
+        active: true,
+      });
+    });
+  });
+
   describe('getStatus', () => {
     it('should return disconnected status for untracked provider', () => {
       const status = tabManager.getStatus('chatgpt');

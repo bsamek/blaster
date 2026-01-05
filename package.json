@@ -26,6 +26,7 @@
   "license": "MIT",
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.3.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.6.1",

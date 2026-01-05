@@ -4,6 +4,7 @@ export interface ProviderConfig {
   id: ProviderId;
   name: string;
   baseUrl: string;
+  newChatUrl: string;
   urlPatterns: string[];
   iconUrl: string;
   color: string;
