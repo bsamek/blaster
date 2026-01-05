@@ -13,7 +13,7 @@ export const PROVIDERS: Record<ProviderId, ProviderConfig> = {
     id: 'claude',
     name: 'Claude',
     baseUrl: 'https://claude.ai',
-    urlPatterns: ['https://claude.ai/*'],
+    urlPatterns: ['https://claude.ai/', 'https://claude.ai/chat/*'],
     iconUrl: '/icons/claude.svg',
     color: '#d97706',
   },
