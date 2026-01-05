@@ -218,6 +218,73 @@ describe('Sidepanel App', () => {
     });
   });
 
+  describe('provider persistence', () => {
+    it('should load saved providers from storage on mount', async () => {
+      // Pre-populate storage with saved selection
+      mockChrome.storage.local.data.set('selectedProviders', ['claude']);
+
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByText('ChatGPT')).not.toHaveClass('selected');
+        expect(screen.getByText('Claude')).toHaveClass('selected');
+        expect(screen.getByText('Gemini')).not.toHaveClass('selected');
+      });
+    });
+
+    it('should save providers to storage when toggled', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(mockChrome.storage.local.get).toHaveBeenCalledWith('selectedProviders');
+      });
+
+      await user.click(screen.getByText('ChatGPT'));
+
+      await waitFor(() => {
+        expect(mockChrome.storage.local.set).toHaveBeenCalledWith({
+          selectedProviders: ['claude', 'gemini'],
+        });
+      });
+    });
+
+    it('should use default providers when storage is empty', async () => {
+      render(<App />);
+
+      await waitFor(() => {
+        expect(mockChrome.storage.local.get).toHaveBeenCalledWith('selectedProviders');
+      });
+
+      // All providers should be selected by default
+      expect(screen.getByText('ChatGPT')).toHaveClass('selected');
+      expect(screen.getByText('Claude')).toHaveClass('selected');
+      expect(screen.getByText('Gemini')).toHaveClass('selected');
+    });
+
+    it('should persist empty selection', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(mockChrome.storage.local.get).toHaveBeenCalled();
+      });
+
+      // Deselect all providers
+      await user.click(screen.getByText('ChatGPT'));
+      await user.click(screen.getByText('Claude'));
+      await user.click(screen.getByText('Gemini'));
+
+      await waitFor(() => {
+        expect(mockChrome.storage.local.set).toHaveBeenLastCalledWith({
+          selectedProviders: [],
+        });
+      });
+    });
+  });
+
   describe('keyboard shortcuts', () => {
     it('should submit on Cmd+Enter (Mac)', async () => {
       const user = userEvent.setup();
