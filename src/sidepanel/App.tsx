@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { ProviderId } from '../shared/types';
-import { PROVIDERS } from '../shared/constants';
+import { PROVIDERS, STORAGE_KEYS } from '../shared/constants';
 
 export function App() {
   const [query, setQuery] = useState('');
@@ -10,6 +10,25 @@ export function App() {
     'gemini',
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load selected providers from storage on mount
+  useEffect(() => {
+    chrome.storage.local.get(STORAGE_KEYS.SELECTED_PROVIDERS).then((result) => {
+      const saved = result[STORAGE_KEYS.SELECTED_PROVIDERS] as ProviderId[] | undefined;
+      if (saved) {
+        setSelectedProviders(saved);
+      }
+      setIsLoaded(true);
+    });
+  }, []);
+
+  // Save selected providers to storage when they change
+  useEffect(() => {
+    if (isLoaded) {
+      chrome.storage.local.set({ [STORAGE_KEYS.SELECTED_PROVIDERS]: selectedProviders });
+    }
+  }, [selectedProviders, isLoaded]);
 
   const toggleProvider = (providerId: ProviderId) => {
     setSelectedProviders((prev) =>
