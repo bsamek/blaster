@@ -1,14 +1,10 @@
 # AI Blaster
 
-A Chrome extension that lets you compare AI responses from ChatGPT, Claude, and Gemini side-by-side.
+A Chrome extension that lets you send the same query to ChatGPT, Claude, and Gemini simultaneously.
 
 ## Features
 
 - Submit queries to multiple AI providers simultaneously
-- Compare responses in a side panel
-- Rate responses with a 5-star system
-- Track query history with search and replay
-- View performance statistics for each provider
 
 ## Installation
 
