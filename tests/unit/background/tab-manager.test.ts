@@ -340,4 +340,160 @@ describe('TabManager', () => {
       expect(() => tabManager.updateTabStatus('chatgpt', true, true)).not.toThrow();
     });
   });
+
+  describe('URL pattern whitelisting', () => {
+    beforeEach(() => {
+      mockChrome.tabs.sendMessage.mockResolvedValue({ isReady: true, isLoggedIn: true });
+    });
+
+    describe('ChatGPT', () => {
+      it('should match chatgpt.com homepage', () => {
+        tabManager.onTabUpdated(
+          700,
+          { status: 'complete' },
+          { id: 700, url: 'https://chatgpt.com/' } as chrome.tabs.Tab
+        );
+        expect(tabManager.getTabId('chatgpt')).toBe(700);
+      });
+
+      it('should match chatgpt.com/c/* conversation URLs', () => {
+        tabManager.onTabUpdated(
+          701,
+          { status: 'complete' },
+          { id: 701, url: 'https://chatgpt.com/c/abc123' } as chrome.tabs.Tab
+        );
+        expect(tabManager.getTabId('chatgpt')).toBe(701);
+      });
+
+      it('should NOT match chatgpt.com/images', () => {
+        tabManager.onTabUpdated(
+          702,
+          { status: 'complete' },
+          { id: 702, url: 'https://chatgpt.com/images' } as chrome.tabs.Tab
+        );
+        expect(tabManager.getTabId('chatgpt')).toBeNull();
+      });
+
+      it('should NOT match chatgpt.com/codex', () => {
+        tabManager.onTabUpdated(
+          703,
+          { status: 'complete' },
+          { id: 703, url: 'https://chatgpt.com/codex' } as chrome.tabs.Tab
+        );
+        expect(tabManager.getTabId('chatgpt')).toBeNull();
+      });
+
+      it('should NOT match chatgpt.com/apps', () => {
+        tabManager.onTabUpdated(
+          704,
+          { status: 'complete' },
+          { id: 704, url: 'https://chatgpt.com/apps' } as chrome.tabs.Tab
+        );
+        expect(tabManager.getTabId('chatgpt')).toBeNull();
+      });
+
+      it('should NOT match chatgpt.com/gpts', () => {
+        tabManager.onTabUpdated(
+          705,
+          { status: 'complete' },
+          { id: 705, url: 'https://chatgpt.com/gpts' } as chrome.tabs.Tab
+        );
+        expect(tabManager.getTabId('chatgpt')).toBeNull();
+      });
+    });
+
+    describe('Claude', () => {
+      it('should match claude.ai/new', () => {
+        tabManager.onTabUpdated(
+          710,
+          { status: 'complete' },
+          { id: 710, url: 'https://claude.ai/new' } as chrome.tabs.Tab
+        );
+        expect(tabManager.getTabId('claude')).toBe(710);
+      });
+
+      it('should match claude.ai/chat/* conversation URLs', () => {
+        tabManager.onTabUpdated(
+          711,
+          { status: 'complete' },
+          { id: 711, url: 'https://claude.ai/chat/abc123' } as chrome.tabs.Tab
+        );
+        expect(tabManager.getTabId('claude')).toBe(711);
+      });
+
+      it('should NOT match claude.ai homepage', () => {
+        tabManager.onTabUpdated(
+          712,
+          { status: 'complete' },
+          { id: 712, url: 'https://claude.ai/' } as chrome.tabs.Tab
+        );
+        expect(tabManager.getTabId('claude')).toBeNull();
+      });
+
+      it('should NOT match claude.ai/settings', () => {
+        tabManager.onTabUpdated(
+          713,
+          { status: 'complete' },
+          { id: 713, url: 'https://claude.ai/settings' } as chrome.tabs.Tab
+        );
+        expect(tabManager.getTabId('claude')).toBeNull();
+      });
+
+      it('should NOT match claude.ai/projects', () => {
+        tabManager.onTabUpdated(
+          714,
+          { status: 'complete' },
+          { id: 714, url: 'https://claude.ai/projects' } as chrome.tabs.Tab
+        );
+        expect(tabManager.getTabId('claude')).toBeNull();
+      });
+    });
+
+    describe('Gemini', () => {
+      it('should match gemini.google.com/app', () => {
+        tabManager.onTabUpdated(
+          720,
+          { status: 'complete' },
+          { id: 720, url: 'https://gemini.google.com/app' } as chrome.tabs.Tab
+        );
+        expect(tabManager.getTabId('gemini')).toBe(720);
+      });
+
+      it('should match gemini.google.com/app/* conversation URLs', () => {
+        tabManager.onTabUpdated(
+          721,
+          { status: 'complete' },
+          { id: 721, url: 'https://gemini.google.com/app/abc123' } as chrome.tabs.Tab
+        );
+        expect(tabManager.getTabId('gemini')).toBe(721);
+      });
+
+      it('should NOT match gemini.google.com homepage', () => {
+        tabManager.onTabUpdated(
+          722,
+          { status: 'complete' },
+          { id: 722, url: 'https://gemini.google.com/' } as chrome.tabs.Tab
+        );
+        expect(tabManager.getTabId('gemini')).toBeNull();
+      });
+
+      it('should NOT match gemini.google.com/extensions', () => {
+        tabManager.onTabUpdated(
+          723,
+          { status: 'complete' },
+          { id: 723, url: 'https://gemini.google.com/extensions' } as chrome.tabs.Tab
+        );
+        expect(tabManager.getTabId('gemini')).toBeNull();
+      });
+
+      it('should NOT match gemini.google.com/gems', () => {
+        tabManager.onTabUpdated(
+          724,
+          { status: 'complete' },
+          { id: 724, url: 'https://gemini.google.com/gems' } as chrome.tabs.Tab
+        );
+        expect(tabManager.getTabId('gemini')).toBeNull();
+      });
+    });
+  });
 });

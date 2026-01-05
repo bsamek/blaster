@@ -12,10 +12,12 @@
   ],
 
   "host_permissions": [
-    "https://chat.openai.com/*",
-    "https://chatgpt.com/*",
-    "https://claude.ai/*",
-    "https://gemini.google.com/*"
+    "https://chatgpt.com/",
+    "https://chatgpt.com/c/*",
+    "https://claude.ai/new",
+    "https://claude.ai/chat/*",
+    "https://gemini.google.com/app",
+    "https://gemini.google.com/app/*"
   ],
 
   "background": {
@@ -25,17 +27,17 @@
 
   "content_scripts": [
     {
-      "matches": ["https://chat.openai.com/*", "https://chatgpt.com/*"],
+      "matches": ["https://chatgpt.com/", "https://chatgpt.com/c/*"],
       "js": ["src/content-scripts/providers/chatgpt.ts"],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://claude.ai/", "https://claude.ai/new", "https://claude.ai/chat/*"],
+      "matches": ["https://claude.ai/new", "https://claude.ai/chat/*"],
       "js": ["src/content-scripts/providers/claude.ts"],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://gemini.google.com/*"],
+      "matches": ["https://gemini.google.com/app", "https://gemini.google.com/app/*"],
       "js": ["src/content-scripts/providers/gemini.ts"],
       "run_at": "document_idle"
     }
