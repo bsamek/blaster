@@ -37,13 +37,6 @@ export function App() {
       await chrome.storage.local.set({
         queries: [],
         responses: [],
-        ratings: [],
-        stats: {
-          totalQueries: 0,
-          totalRatings: 0,
-          thumbsUpByProvider: {},
-          thumbsDownByProvider: {},
-        },
       });
       alert('History cleared!');
     }
@@ -100,38 +93,6 @@ export function App() {
             )
           )}
         </div>
-      </section>
-
-      <section style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '16px', marginBottom: '12px', color: '#ccc' }}>
-          History
-        </h2>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '14px', color: '#888' }}>
-            Max history items:
-          </span>
-          <input
-            type="number"
-            min={10}
-            max={500}
-            value={preferences.maxHistoryItems}
-            onChange={(e) =>
-              setPreferences((prev) => ({
-                ...prev,
-                maxHistoryItems: parseInt(e.target.value) || 100,
-              }))
-            }
-            style={{
-              width: '80px',
-              padding: '6px 10px',
-              border: '1px solid #3a3a5c',
-              borderRadius: '4px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              color: '#eee',
-              fontSize: '14px',
-            }}
-          />
-        </label>
       </section>
 
       <section style={{ marginBottom: '24px' }}>

@@ -1,4 +1,4 @@
-import type { ProviderId, Query, QueryResponse, QuerySession, RatingStats } from '../shared/types';
+import type { ProviderId, Query, QueryResponse, QuerySession } from '../shared/types';
 import type { TabManager } from './tab-manager';
 import { generateId } from '../shared/utils';
 
@@ -210,17 +210,6 @@ export class QueryOrchestrator {
     // Keep only the last 100 queries
     const trimmedQueries = queries.slice(0, 100);
     await chrome.storage.local.set({ queries: trimmedQueries });
-
-    // Update stats
-    const statsResult = await chrome.storage.local.get('stats') as { stats?: RatingStats };
-    const stats: RatingStats = statsResult.stats || {
-      totalQueries: 0,
-      totalRatings: 0,
-      thumbsUpByProvider: {},
-      thumbsDownByProvider: {},
-    };
-    stats.totalQueries++;
-    await chrome.storage.local.set({ stats });
   }
 
   private async saveResponseToHistory(response: QueryResponse): Promise<void> {

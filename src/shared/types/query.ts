@@ -21,16 +21,3 @@ export interface QuerySession {
   responses: Partial<Record<ProviderId, QueryResponse>>;
   status: 'pending' | 'in-progress' | 'completed' | 'error';
 }
-
-export interface Rating {
-  queryId: string;
-  providerId: ProviderId;
-  vote: 'up' | 'down';
-  timestamp: number;
-  notes?: string;
-}
-
-export interface QueryWithRatings {
-  session: QuerySession;
-  ratings: Rating[];
-}

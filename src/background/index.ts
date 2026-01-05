@@ -1,7 +1,7 @@
 import { MessageHandler } from './message-handler';
 import { QueryOrchestrator } from './query-orchestrator';
 import { TabManager } from './tab-manager';
-import { DEFAULT_PREFERENCES, DEFAULT_STATS } from '../shared/types';
+import { DEFAULT_PREFERENCES } from '../shared/types';
 
 // Service worker entry point
 // Initialize components
@@ -38,8 +38,6 @@ async function initializeDefaultSettings(): Promise<void> {
     preferences: DEFAULT_PREFERENCES,
     queries: [],
     responses: [],
-    ratings: [],
-    stats: DEFAULT_STATS,
   });
 }
 
