@@ -45,14 +45,10 @@ export class ChatGPTAdapter extends BaseProviderAdapter {
       childList: true,
       subtree: true,
       characterData: true,
-    }, () => {
-      // Could track streaming responses here if needed
-    });
+    }, () => {});
   }
 
   private async handleSubmitQuery(queryId: string, text: string): Promise<void> {
-    this.currentQueryId = queryId;
-
     try {
       await this.submitQuery(text);
       const response = await this.waitForResponse();
@@ -110,11 +106,6 @@ export class ChatGPTAdapter extends BaseProviderAdapter {
     const loginButton = document.querySelector('[data-testid="login-button"]');
     const userMenu = document.querySelector('[data-testid="user-menu"], .avatar, [data-testid="profile-button"]');
     return !loginButton && !!userMenu;
-  }
-
-  hasActiveConversation(): boolean {
-    const responses = document.querySelectorAll(this.getSelectors().responseContainerSelector);
-    return responses.length > 0;
   }
 
   getResponse(): string | null {

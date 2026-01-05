@@ -4,7 +4,6 @@ import { generateId } from '../shared/utils';
 
 export class QueryOrchestrator {
   private activeSessions = new Map<string, QuerySession>();
-  private sessionListeners: ((session: QuerySession) => void)[] = [];
 
   constructor(private tabManager: TabManager) {}
 
@@ -173,26 +172,8 @@ export class QueryOrchestrator {
     return this.activeSessions.get(queryId);
   }
 
-  getActiveSessions(): QuerySession[] {
-    return Array.from(this.activeSessions.values());
-  }
-
-  onSessionUpdate(listener: (session: QuerySession) => void): () => void {
-    this.sessionListeners.push(listener);
-    return () => {
-      const index = this.sessionListeners.indexOf(listener);
-      if (index > -1) {
-        this.sessionListeners.splice(index, 1);
-      }
-    };
-  }
-
   private notifySessionUpdate(session: QuerySession): void {
-    for (const listener of this.sessionListeners) {
-      listener(session);
-    }
-
-    // Also send to all extension pages
+    // Send to all extension pages
     chrome.runtime.sendMessage({
       type: 'SESSION_UPDATE',
       payload: { session },

@@ -10,7 +10,6 @@ interface ManagedTab {
 
 export class TabManager {
   private tabs = new Map<ProviderId, ManagedTab>();
-  private statusListeners: ((status: ProviderStatus) => void)[] = [];
 
   constructor() {
     this.setupTabListeners();
@@ -61,12 +60,6 @@ export class TabManager {
     for (const [providerId, managedTab] of this.tabs) {
       if (managedTab.tabId === tabId) {
         this.tabs.delete(providerId);
-        this.notifyStatusChange({
-          providerId,
-          isConnected: false,
-          isLoggedIn: false,
-          isReady: false,
-        });
         break;
       }
     }
@@ -85,14 +78,6 @@ export class TabManager {
         if (managedTab) {
           managedTab.isReady = response.isReady;
           managedTab.isLoggedIn = response.isLoggedIn;
-
-          this.notifyStatusChange({
-            providerId,
-            isConnected: true,
-            isLoggedIn: response.isLoggedIn,
-            isReady: response.isReady,
-            tabId,
-          });
         }
       }
     } catch {
@@ -179,22 +164,6 @@ export class TabManager {
     );
   }
 
-  onStatusChange(listener: (status: ProviderStatus) => void): () => void {
-    this.statusListeners.push(listener);
-    return () => {
-      const index = this.statusListeners.indexOf(listener);
-      if (index > -1) {
-        this.statusListeners.splice(index, 1);
-      }
-    };
-  }
-
-  private notifyStatusChange(status: ProviderStatus): void {
-    for (const listener of this.statusListeners) {
-      listener(status);
-    }
-  }
-
   updateTabStatus(
     providerId: ProviderId,
     isReady: boolean,
@@ -204,14 +173,6 @@ export class TabManager {
     if (tab) {
       tab.isReady = isReady;
       tab.isLoggedIn = isLoggedIn;
-
-      this.notifyStatusChange({
-        providerId,
-        isConnected: true,
-        isLoggedIn,
-        isReady,
-        tabId: tab.tabId,
-      });
     }
   }
 }

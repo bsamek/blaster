@@ -44,14 +44,10 @@ export class ClaudeAdapter extends BaseProviderAdapter {
       childList: true,
       subtree: true,
       characterData: true,
-    }, () => {
-      // Track streaming responses if needed
-    });
+    }, () => {});
   }
 
   private async handleSubmitQuery(queryId: string, text: string): Promise<void> {
-    this.currentQueryId = queryId;
-
     try {
       await this.submitQuery(text);
       const response = await this.waitForResponse();
@@ -136,11 +132,6 @@ export class ClaudeAdapter extends BaseProviderAdapter {
     const userMenu = document.querySelector('[data-testid="user-menu"], .user-avatar, nav button');
     const loginPage = document.querySelector('form[action*="login"], .login-form');
     return !!userMenu && !loginPage;
-  }
-
-  hasActiveConversation(): boolean {
-    const responses = document.querySelectorAll(this.getSelectors().responseContainerSelector);
-    return responses.length > 0;
   }
 
   getResponse(): string | null {

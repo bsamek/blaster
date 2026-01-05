@@ -34,7 +34,6 @@ export interface IProviderAdapter {
 
   isReady(): boolean;
   isLoggedIn(): boolean;
-  hasActiveConversation(): boolean;
 
   submitQuery(query: string): Promise<void>;
   waitForResponse(timeoutMs?: number): Promise<string>;
