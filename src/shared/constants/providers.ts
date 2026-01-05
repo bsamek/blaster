@@ -26,17 +26,3 @@ export const PROVIDERS: Record<ProviderId, ProviderConfig> = {
     color: '#4285f4',
   },
 };
-
-export const PROVIDER_IDS: ProviderId[] = ['chatgpt', 'claude', 'gemini'];
-
-export function getProviderFromUrl(url: string): ProviderId | null {
-  for (const [id, config] of Object.entries(PROVIDERS)) {
-    for (const pattern of config.urlPatterns) {
-      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
-      if (regex.test(url)) {
-        return id as ProviderId;
-      }
-    }
-  }
-  return null;
-}

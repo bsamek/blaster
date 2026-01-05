@@ -16,5 +16,3 @@ export function createAdapter(providerId: ProviderId): IProviderAdapter {
   }
   return new AdapterClass();
 }
-
-export { ChatGPTAdapter, ClaudeAdapter, GeminiAdapter };

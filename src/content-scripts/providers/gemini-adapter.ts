@@ -43,14 +43,10 @@ export class GeminiAdapter extends BaseProviderAdapter {
       childList: true,
       subtree: true,
       characterData: true,
-    }, () => {
-      // Track streaming responses if needed
-    });
+    }, () => {});
   }
 
   private async handleSubmitQuery(queryId: string, text: string): Promise<void> {
-    this.currentQueryId = queryId;
-
     try {
       await this.submitQuery(text);
       const response = await this.waitForResponse();
@@ -88,11 +84,6 @@ export class GeminiAdapter extends BaseProviderAdapter {
     const userAvatar = document.querySelector('img[alt*="profile"], .user-avatar, [data-user-id]');
     const loginButton = document.querySelector('a[href*="accounts.google.com"], .sign-in-button');
     return !!userAvatar && !loginButton;
-  }
-
-  hasActiveConversation(): boolean {
-    const responses = document.querySelectorAll(this.getSelectors().responseContainerSelector);
-    return responses.length > 0;
   }
 
   getResponse(): string | null {
