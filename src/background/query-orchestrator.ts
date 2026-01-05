@@ -9,8 +9,7 @@ export class QueryOrchestrator {
 
   async submitQuery(
     text: string,
-    providers: ProviderId[],
-    newChat: boolean = false
+    providers: ProviderId[]
   ): Promise<QuerySession> {
     const query: Query = {
       id: generateId(),
@@ -36,7 +35,7 @@ export class QueryOrchestrator {
     // Submit to all providers in parallel
     const submissions = providers.map(async (providerId) => {
       try {
-        await this.submitToProvider(query, providerId, newChat);
+        await this.submitToProvider(query, providerId);
       } catch (error) {
         const errorResponse: QueryResponse = {
           queryId: query.id,
@@ -62,10 +61,9 @@ export class QueryOrchestrator {
 
   private async submitToProvider(
     query: Query,
-    providerId: ProviderId,
-    newChat: boolean = false
+    providerId: ProviderId
   ): Promise<void> {
-    const tabId = await this.tabManager.ensureProviderTab(providerId, newChat);
+    const tabId = await this.tabManager.ensureProviderTab(providerId);
 
     // Wait for tab to be ready
     await this.waitForTabReady(tabId, providerId);

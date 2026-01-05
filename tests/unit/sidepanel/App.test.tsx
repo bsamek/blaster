@@ -34,7 +34,7 @@ describe('Sidepanel App', () => {
     it('should render the submit buttons', () => {
       render(<App />);
       expect(screen.getByText('Send')).toBeInTheDocument();
-      expect(screen.getByText('Send to New Chat')).toBeInTheDocument();
+      expect(screen.getByText('New Chat')).toBeInTheDocument();
     });
 
     it('should have all providers selected by default', () => {
@@ -127,7 +127,6 @@ describe('Sidepanel App', () => {
           payload: {
             text: 'What is TypeScript?',
             providers: ['chatgpt', 'claude', 'gemini'],
-            newChat: false,
           },
           timestamp: expect.any(Number),
         });
@@ -149,7 +148,6 @@ describe('Sidepanel App', () => {
           payload: {
             text: 'Test query',
             providers: ['chatgpt'],
-            newChat: false,
           },
           timestamp: expect.any(Number),
         });
@@ -220,20 +218,37 @@ describe('Sidepanel App', () => {
       });
     });
 
-    it('should send newChat: true when Send to New Chat is clicked', async () => {
+    it('should send NEW_CHAT message when New Chat is clicked', async () => {
       const user = userEvent.setup();
       render(<App />);
 
-      await user.type(screen.getByTestId('query-input'), 'Test query');
-      await user.click(screen.getByText('Send to New Chat'));
+      await user.click(screen.getByText('New Chat'));
 
       await waitFor(() => {
         expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
-          type: 'SUBMIT_QUERY',
+          type: 'NEW_CHAT',
           payload: {
-            text: 'Test query',
             providers: ['chatgpt', 'claude', 'gemini'],
-            newChat: true,
+          },
+          timestamp: expect.any(Number),
+        });
+      });
+    });
+
+    it('should allow New Chat even without query text', async () => {
+      const user = userEvent.setup();
+      render(<App />);
+
+      // New Chat button should be enabled without query text
+      expect(screen.getByText('New Chat')).toBeEnabled();
+
+      await user.click(screen.getByText('New Chat'));
+
+      await waitFor(() => {
+        expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
+          type: 'NEW_CHAT',
+          payload: {
+            providers: ['chatgpt', 'claude', 'gemini'],
           },
           timestamp: expect.any(Number),
         });

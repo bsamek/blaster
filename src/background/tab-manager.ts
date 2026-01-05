@@ -85,47 +85,7 @@ export class TabManager {
     }
   }
 
-  async ensureProviderTab(providerId: ProviderId, newChat: boolean = false): Promise<number> {
-    const config = PROVIDERS[providerId];
-
-    // If newChat is requested, navigate existing tab to new chat URL or create new tab
-    if (newChat) {
-      const existingTab = this.tabs.get(providerId);
-      if (existingTab) {
-        try {
-          await chrome.tabs.get(existingTab.tabId);
-          // Navigate existing tab to new chat URL
-          await chrome.tabs.update(existingTab.tabId, {
-            url: config.newChatUrl,
-            active: true
-          });
-          existingTab.isReady = false;
-          return existingTab.tabId;
-        } catch {
-          this.tabs.delete(providerId);
-        }
-      }
-
-      // No existing tab, create a new one with newChatUrl
-      const newTab = await chrome.tabs.create({
-        url: config.newChatUrl,
-        active: false,
-      });
-
-      if (!newTab.id) {
-        throw new Error(`Failed to create tab for ${providerId}`);
-      }
-
-      this.tabs.set(providerId, {
-        tabId: newTab.id,
-        providerId,
-        isReady: false,
-        isLoggedIn: false,
-      });
-
-      return newTab.id;
-    }
-
+  async ensureProviderTab(providerId: ProviderId): Promise<number> {
     // Check if we already have an active tab for this provider
     const existingTab = this.tabs.get(providerId);
     if (existingTab) {
@@ -140,6 +100,7 @@ export class TabManager {
     }
 
     // Search for existing tabs matching the provider URL
+    const config = PROVIDERS[providerId];
     const existingTabs = await chrome.tabs.query({
       url: config.urlPatterns,
     });
@@ -180,6 +141,45 @@ export class TabManager {
     });
 
     return newTab.id;
+  }
+
+  async openNewChats(providers: ProviderId[]): Promise<void> {
+    await Promise.all(providers.map((providerId) => this.openNewChat(providerId)));
+  }
+
+  private async openNewChat(providerId: ProviderId): Promise<void> {
+    const config = PROVIDERS[providerId];
+    const existingTab = this.tabs.get(providerId);
+
+    if (existingTab) {
+      try {
+        await chrome.tabs.get(existingTab.tabId);
+        // Navigate existing tab to new chat URL
+        await chrome.tabs.update(existingTab.tabId, {
+          url: config.newChatUrl,
+          active: true,
+        });
+        existingTab.isReady = false;
+        return;
+      } catch {
+        this.tabs.delete(providerId);
+      }
+    }
+
+    // No existing tab, create a new one with newChatUrl
+    const newTab = await chrome.tabs.create({
+      url: config.newChatUrl,
+      active: true,
+    });
+
+    if (newTab.id) {
+      this.tabs.set(providerId, {
+        tabId: newTab.id,
+        providerId,
+        isReady: false,
+        isLoggedIn: false,
+      });
+    }
   }
 
   getTabId(providerId: ProviderId): number | null {

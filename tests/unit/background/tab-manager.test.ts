@@ -219,8 +219,10 @@ describe('TabManager', () => {
         'Failed to create tab for chatgpt'
       );
     });
+  });
 
-    it('should navigate existing tab to newChatUrl when newChat is true', async () => {
+  describe('openNewChats', () => {
+    it('should navigate existing tab to newChatUrl', async () => {
       mockChrome.tabs.sendMessage.mockResolvedValue({ isReady: true, isLoggedIn: true });
       mockChrome.tabs.get = vi.fn().mockResolvedValue({ id: 401 });
       mockChrome.tabs.update.mockResolvedValue({ id: 401 });
@@ -232,51 +234,42 @@ describe('TabManager', () => {
         { id: 401, url: 'https://claude.ai/chat/123' } as chrome.tabs.Tab
       );
 
-      const tabId = await tabManager.ensureProviderTab('claude', true);
+      await tabManager.openNewChats(['claude']);
 
-      expect(tabId).toBe(401);
       expect(mockChrome.tabs.update).toHaveBeenCalledWith(401, {
         url: 'https://claude.ai/new',
         active: true,
       });
     });
 
-    it('should create new tab with newChatUrl when newChat is true and no existing tab', async () => {
-      mockChrome.tabs.query.mockResolvedValue([]);
+    it('should create new tab with newChatUrl when no existing tab', async () => {
       mockChrome.tabs.create.mockResolvedValue({ id: 402 });
 
-      const tabId = await tabManager.ensureProviderTab('claude', true);
+      await tabManager.openNewChats(['claude']);
 
-      expect(tabId).toBe(402);
       expect(mockChrome.tabs.create).toHaveBeenCalledWith({
         url: 'https://claude.ai/new',
-        active: false,
+        active: true,
       });
     });
 
-    it('should use newChatUrl for ChatGPT when newChat is true', async () => {
-      mockChrome.tabs.query.mockResolvedValue([]);
+    it('should open new chats for multiple providers', async () => {
       mockChrome.tabs.create.mockResolvedValue({ id: 403 });
 
-      const tabId = await tabManager.ensureProviderTab('chatgpt', true);
+      await tabManager.openNewChats(['chatgpt', 'claude', 'gemini']);
 
-      expect(tabId).toBe(403);
+      expect(mockChrome.tabs.create).toHaveBeenCalledTimes(3);
       expect(mockChrome.tabs.create).toHaveBeenCalledWith({
         url: 'https://chatgpt.com/',
-        active: false,
+        active: true,
       });
-    });
-
-    it('should use newChatUrl for Gemini when newChat is true', async () => {
-      mockChrome.tabs.query.mockResolvedValue([]);
-      mockChrome.tabs.create.mockResolvedValue({ id: 404 });
-
-      const tabId = await tabManager.ensureProviderTab('gemini', true);
-
-      expect(tabId).toBe(404);
+      expect(mockChrome.tabs.create).toHaveBeenCalledWith({
+        url: 'https://claude.ai/new',
+        active: true,
+      });
       expect(mockChrome.tabs.create).toHaveBeenCalledWith({
         url: 'https://gemini.google.com/app',
-        active: false,
+        active: true,
       });
     });
   });

@@ -3,6 +3,7 @@ import type { QuerySession } from './query';
 
 export type MessageType =
   | 'SUBMIT_QUERY'
+  | 'NEW_CHAT'
   | 'RESPONSE_RECEIVED'
   | 'RESPONSE_ERROR'
   | 'GET_PROVIDER_STATUS'
@@ -20,7 +21,10 @@ export interface SubmitQueryMessage extends BaseMessage<'SUBMIT_QUERY', {
   queryId?: string;
   text: string;
   providers: ProviderId[];
-  newChat?: boolean;
+}> {}
+
+export interface NewChatMessage extends BaseMessage<'NEW_CHAT', {
+  providers: ProviderId[];
 }> {}
 
 export interface ResponseReceivedMessage extends BaseMessage<'RESPONSE_RECEIVED', {
@@ -50,6 +54,7 @@ export interface GetProviderStatusMessage extends BaseMessage<'GET_PROVIDER_STAT
 
 export type ExtensionMessage =
   | SubmitQueryMessage
+  | NewChatMessage
   | ResponseReceivedMessage
   | ResponseErrorMessage
   | ProviderStatusMessage

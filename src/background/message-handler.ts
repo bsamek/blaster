@@ -18,6 +18,10 @@ export class MessageHandler {
         this.handleSubmitQuery(message.payload, sendResponse);
         return true;
 
+      case 'NEW_CHAT':
+        this.handleNewChat(message.payload, sendResponse);
+        return true;
+
       case 'RESPONSE_RECEIVED':
         this.handleResponseReceived(message.payload);
         sendResponse({ success: true });
@@ -43,16 +47,30 @@ export class MessageHandler {
   }
 
   private async handleSubmitQuery(
-    payload: { queryId?: string; text: string; providers: ProviderId[]; newChat?: boolean },
+    payload: { queryId?: string; text: string; providers: ProviderId[] },
     sendResponse: (response: unknown) => void
   ): Promise<void> {
     try {
       const session = await this.orchestrator.submitQuery(
         payload.text,
-        payload.providers,
-        payload.newChat ?? false
+        payload.providers
       );
       sendResponse({ success: true, session });
+    } catch (error) {
+      sendResponse({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  private async handleNewChat(
+    payload: { providers: ProviderId[] },
+    sendResponse: (response: unknown) => void
+  ): Promise<void> {
+    try {
+      await this.tabManager.openNewChats(payload.providers);
+      sendResponse({ success: true });
     } catch (error) {
       sendResponse({
         success: false,

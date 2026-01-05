@@ -50,17 +50,9 @@ describe('QueryOrchestrator', () => {
       await orchestrator.submitQuery('Test', ['chatgpt', 'claude', 'gemini']);
 
       expect(mockTabManager.ensureProviderTab).toHaveBeenCalledTimes(3);
-      expect(mockTabManager.ensureProviderTab).toHaveBeenCalledWith('chatgpt', false);
-      expect(mockTabManager.ensureProviderTab).toHaveBeenCalledWith('claude', false);
-      expect(mockTabManager.ensureProviderTab).toHaveBeenCalledWith('gemini', false);
-    });
-
-    it('should call ensureProviderTab with newChat: true when specified', async () => {
-      await orchestrator.submitQuery('Test', ['chatgpt', 'claude'], true);
-
-      expect(mockTabManager.ensureProviderTab).toHaveBeenCalledTimes(2);
-      expect(mockTabManager.ensureProviderTab).toHaveBeenCalledWith('chatgpt', true);
-      expect(mockTabManager.ensureProviderTab).toHaveBeenCalledWith('claude', true);
+      expect(mockTabManager.ensureProviderTab).toHaveBeenCalledWith('chatgpt');
+      expect(mockTabManager.ensureProviderTab).toHaveBeenCalledWith('claude');
+      expect(mockTabManager.ensureProviderTab).toHaveBeenCalledWith('gemini');
     });
 
     it('should save query to storage', async () => {

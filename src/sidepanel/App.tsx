@@ -19,7 +19,7 @@ export function App() {
     );
   };
 
-  const handleSubmit = async (newChat: boolean = false) => {
+  const handleSubmit = async () => {
     if (!query.trim() || selectedProviders.length === 0) return;
 
     setIsSubmitting(true);
@@ -29,7 +29,6 @@ export function App() {
         payload: {
           text: query.trim(),
           providers: selectedProviders,
-          newChat,
         },
         timestamp: Date.now(),
       });
@@ -37,6 +36,18 @@ export function App() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleNewChat = async () => {
+    if (selectedProviders.length === 0) return;
+
+    await chrome.runtime.sendMessage({
+      type: 'NEW_CHAT',
+      payload: {
+        providers: selectedProviders,
+      },
+      timestamp: Date.now(),
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -76,17 +87,17 @@ export function App() {
         <div className="submit-buttons-row">
           <button
             className="submit-button"
-            onClick={() => handleSubmit(false)}
+            onClick={handleSubmit}
             disabled={!query.trim() || selectedProviders.length === 0 || isSubmitting}
           >
             {isSubmitting ? 'Sending...' : 'Send'}
           </button>
           <button
             className="submit-button secondary"
-            onClick={() => handleSubmit(true)}
-            disabled={!query.trim() || selectedProviders.length === 0 || isSubmitting}
+            onClick={handleNewChat}
+            disabled={selectedProviders.length === 0}
           >
-            {isSubmitting ? 'Sending...' : 'Send to New Chat'}
+            New Chat
           </button>
         </div>
       </div>

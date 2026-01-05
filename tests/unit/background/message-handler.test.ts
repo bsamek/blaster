@@ -36,6 +36,7 @@ describe('MessageHandler', () => {
         { providerId: 'gemini', isConnected: false, isLoggedIn: false, isReady: false },
       ]),
       updateTabStatus: vi.fn(),
+      openNewChats: vi.fn().mockResolvedValue(undefined),
     };
 
     messageHandler = new MessageHandler(
@@ -71,8 +72,7 @@ describe('MessageHandler', () => {
 
       expect(mockOrchestrator.submitQuery).toHaveBeenCalledWith(
         'What is TypeScript?',
-        ['chatgpt', 'claude'],
-        false
+        ['chatgpt', 'claude']
       );
       expect(sendResponse).toHaveBeenCalledWith({
         success: true,
@@ -135,6 +135,60 @@ describe('MessageHandler', () => {
       expect(sendResponse).toHaveBeenCalledWith({
         success: false,
         error: 'Unknown error',
+      });
+    });
+  });
+
+  describe('NEW_CHAT message', () => {
+    it('should call tabManager.openNewChats with correct providers', async () => {
+      const message: ExtensionMessage = {
+        type: 'NEW_CHAT',
+        payload: {
+          providers: ['chatgpt', 'claude'] as ProviderId[],
+        },
+        timestamp: Date.now(),
+      };
+
+      const sendResponse = vi.fn();
+      const result = messageHandler.handleMessage(
+        message,
+        {} as chrome.runtime.MessageSender,
+        sendResponse
+      );
+
+      // Should return true for async response
+      expect(result).toBe(true);
+
+      // Wait for async operation
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(mockTabManager.openNewChats).toHaveBeenCalledWith(['chatgpt', 'claude']);
+      expect(sendResponse).toHaveBeenCalledWith({ success: true });
+    });
+
+    it('should handle errors when openNewChats fails', async () => {
+      mockTabManager.openNewChats.mockRejectedValue(new Error('Tab creation failed'));
+
+      const message: ExtensionMessage = {
+        type: 'NEW_CHAT',
+        payload: {
+          providers: ['chatgpt'] as ProviderId[],
+        },
+        timestamp: Date.now(),
+      };
+
+      const sendResponse = vi.fn();
+      messageHandler.handleMessage(
+        message,
+        {} as chrome.runtime.MessageSender,
+        sendResponse
+      );
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        error: 'Tab creation failed',
       });
     });
   });
