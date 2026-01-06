@@ -21,42 +21,6 @@ export class ClaudeAdapter extends BaseProviderAdapter {
     await waitForElement(this.getSelectors().textareaSelector, 30000);
   }
 
-  protected setupEventListeners(): void {
-    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-      if (message.type === 'SUBMIT_QUERY') {
-        this.handleSubmitQuery(message.payload.queryId, message.payload.text)
-          .then(() => sendResponse({ success: true }))
-          .catch((error) => sendResponse({ success: false, error: error.message }));
-        return true;
-      }
-
-      if (message.type === 'PING') {
-        sendResponse({
-          providerId: this.providerId,
-          isReady: this.isReady(),
-          isLoggedIn: this.isLoggedIn(),
-        });
-        return true;
-      }
-    });
-
-    this.observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    }, () => {});
-  }
-
-  private async handleSubmitQuery(queryId: string, text: string): Promise<void> {
-    try {
-      await this.submitQuery(text);
-      const response = await this.waitForResponse();
-      this.notifyResponse(queryId, response);
-    } catch (error) {
-      this.notifyError(queryId, error instanceof Error ? error.message : 'Unknown error');
-    }
-  }
-
   async submitQuery(query: string): Promise<void> {
     const selectors = this.getSelectors();
     const inputElement = await waitForElement(selectors.textareaSelector);

@@ -1,11 +1,34 @@
 import type { ProviderId, Query, QueryResponse, QuerySession } from '../shared/types';
 import type { TabManager } from './tab-manager';
 import { generateId } from '../shared/utils';
+import { MessageService } from '../shared/services';
+import { STORAGE_LIMITS, TIMEOUTS } from '../shared/constants';
 
 export class QueryOrchestrator {
   private activeSessions = new Map<string, QuerySession>();
 
   constructor(private tabManager: TabManager) {}
+
+  /**
+   * Generic helper to save items to storage history with optional limits.
+   */
+  private async saveToHistory<T>(
+    storageKey: string,
+    item: T,
+    options?: { prepend?: boolean; limit?: number }
+  ): Promise<void> {
+    const result = await chrome.storage.local.get(storageKey);
+    const items = (result[storageKey] as T[]) || [];
+
+    if (options?.prepend) {
+      items.unshift(item);
+    } else {
+      items.push(item);
+    }
+
+    const finalItems = options?.limit ? items.slice(0, options.limit) : items;
+    await chrome.storage.local.set({ [storageKey]: finalItems });
+  }
 
   async submitQuery(
     text: string,
@@ -52,9 +75,15 @@ export class QueryOrchestrator {
     });
 
     // Don't await all - let responses come in asynchronously
-    Promise.all(submissions).then(() => {
-      this.checkSessionComplete(query.id);
-    });
+    // But ensure we always check completion, even if all submissions fail
+    Promise.all(submissions)
+      .then(() => {
+        this.checkSessionComplete(query.id);
+      })
+      .catch((error) => {
+        console.error('Failed to complete submissions:', error);
+        this.checkSessionComplete(query.id);
+      });
 
     return session;
   }
@@ -69,39 +98,24 @@ export class QueryOrchestrator {
     await this.waitForTabReady(tabId, providerId);
 
     // Send message to content script
-    await chrome.tabs.sendMessage(tabId, {
-      type: 'SUBMIT_QUERY',
-      payload: {
-        queryId: query.id,
-        text: query.text,
-      },
-      timestamp: Date.now(),
-    });
+    await MessageService.submitQueryToTab(tabId, query.id, query.text);
   }
 
   private async waitForTabReady(
     tabId: number,
     providerId: ProviderId,
-    timeout = 30000
+    timeout = TIMEOUTS.DOM_READY
   ): Promise<void> {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeout) {
-      try {
-        const response = await chrome.tabs.sendMessage(tabId, {
-          type: 'PING',
-          payload: {},
-          timestamp: Date.now(),
-        });
+      const response = await MessageService.pingTab(tabId);
 
-        if (response?.isReady) {
-          return;
-        }
-      } catch {
-        // Content script not ready yet
+      if (response?.isReady) {
+        return;
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, TIMEOUTS.POLL_INTERVAL));
     }
 
     throw new Error(`Tab for ${providerId} not ready after ${timeout}ms`);
@@ -173,30 +187,17 @@ export class QueryOrchestrator {
   }
 
   private notifySessionUpdate(session: QuerySession): void {
-    // Send to all extension pages
-    chrome.runtime.sendMessage({
-      type: 'SESSION_UPDATE',
-      payload: { session },
-      timestamp: Date.now(),
-    }).catch(() => {
-      // Ignore errors if no listeners
-    });
+    MessageService.notifySessionUpdate(session);
   }
 
   private async saveQueryToHistory(query: Query): Promise<void> {
-    const result = await chrome.storage.local.get('queries') as { queries?: Query[] };
-    const queries: Query[] = result.queries || [];
-    queries.unshift(query);
-
-    // Keep only the last 100 queries
-    const trimmedQueries = queries.slice(0, 100);
-    await chrome.storage.local.set({ queries: trimmedQueries });
+    await this.saveToHistory('queries', query, {
+      prepend: true,
+      limit: STORAGE_LIMITS.QUERY_HISTORY,
+    });
   }
 
   private async saveResponseToHistory(response: QueryResponse): Promise<void> {
-    const result = await chrome.storage.local.get('responses') as { responses?: QueryResponse[] };
-    const responses: QueryResponse[] = result.responses || [];
-    responses.push(response);
-    await chrome.storage.local.set({ responses });
+    await this.saveToHistory('responses', response);
   }
 }

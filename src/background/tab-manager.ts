@@ -1,4 +1,4 @@
-import { PROVIDERS } from '../shared/constants';
+import { PROVIDERS, PROVIDER_IDS } from '../shared/constants';
 import type { ProviderId, ProviderStatus } from '../shared/types';
 
 interface ManagedTab {
@@ -198,9 +198,7 @@ export class TabManager {
   }
 
   getAllStatuses(): ProviderStatus[] {
-    return (['chatgpt', 'claude', 'gemini'] as ProviderId[]).map((id) =>
-      this.getStatus(id)
-    );
+    return PROVIDER_IDS.map((id) => this.getStatus(id));
   }
 
   updateTabStatus(

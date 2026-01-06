@@ -1,5 +1,7 @@
 import type { IProviderAdapter, ProviderId, ProviderSelectors } from '../shared/types';
 import { DOMObserver, waitForElement, waitForElementRemoval } from './dom-observer';
+import { MessageService } from '../shared/services';
+import { TIMEOUTS } from '../shared/constants';
 
 export abstract class BaseProviderAdapter implements IProviderAdapter {
   abstract readonly providerId: ProviderId;
@@ -27,7 +29,50 @@ export abstract class BaseProviderAdapter implements IProviderAdapter {
   }
 
   protected abstract waitForDOMReady(): Promise<void>;
-  protected abstract setupEventListeners(): void;
+
+  /**
+   * Sets up message listeners and DOM observers.
+   * This is the same for all adapters - listens for SUBMIT_QUERY and PING messages.
+   */
+  protected setupEventListeners(): void {
+    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      if (message.type === 'SUBMIT_QUERY') {
+        this.handleSubmitQuery(message.payload.queryId, message.payload.text)
+          .then(() => sendResponse({ success: true }))
+          .catch((error) => sendResponse({ success: false, error: error.message }));
+        return true; // Indicates async response
+      }
+
+      if (message.type === 'PING') {
+        sendResponse({
+          providerId: this.providerId,
+          isReady: this.isReady(),
+          isLoggedIn: this.isLoggedIn(),
+        });
+        return true;
+      }
+    });
+
+    // Observe DOM for response updates
+    this.observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    }, () => {});
+  }
+
+  /**
+   * Handles a query submission request from the background script.
+   */
+  protected async handleSubmitQuery(queryId: string, text: string): Promise<void> {
+    try {
+      await this.submitQuery(text);
+      const response = await this.waitForResponse();
+      this.notifyResponse(queryId, response);
+    } catch (error) {
+      this.notifyError(queryId, error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
 
   isReady(): boolean {
     if (!this.isInitialized) return false;
@@ -47,7 +92,7 @@ export abstract class BaseProviderAdapter implements IProviderAdapter {
     this.setInputValue(textarea as HTMLTextAreaElement, query);
 
     // Wait a bit for the button to become enabled
-    await this.sleep(100);
+    await this.sleep(TIMEOUTS.BUTTON_POLL_INTERVAL);
 
     // Find and click submit button
     const submitButton = await waitForElement(selectors.submitButtonSelector);
@@ -57,60 +102,25 @@ export abstract class BaseProviderAdapter implements IProviderAdapter {
     this.queryStartTime = Date.now();
   }
 
-  async waitForResponse(timeoutMs = 60000): Promise<string> {
+  async waitForResponse(timeoutMs = TIMEOUTS.RESPONSE_WAIT): Promise<string> {
     const selectors = this.getSelectors();
     const startTime = Date.now();
 
     // Get initial response count to detect new responses
     const initialResponseCount = document.querySelectorAll(selectors.responseContainerSelector).length;
 
-    // Wait for loading indicator to appear (if it exists)
-    if (selectors.loadingIndicatorSelector) {
-      try {
-        await waitForElement(selectors.loadingIndicatorSelector, 5000);
-      } catch {
-        // Loading indicator might not appear for fast responses
-      }
-
-      // Wait for loading indicator to disappear
-      try {
-        await waitForElementRemoval(
-          selectors.loadingIndicatorSelector,
-          timeoutMs - (Date.now() - startTime)
-        );
-      } catch {
-        // Don't throw here - try to get response anyway
-        console.log('Loading indicator timeout, trying to get response anyway');
-      }
-    }
+    // Wait for loading indicator to appear and disappear (if configured)
+    await this.waitForLoadingIndicator(selectors, startTime, timeoutMs);
 
     // Wait a bit for final content to settle
-    await this.sleep(500);
+    await this.sleep(TIMEOUTS.CONTENT_SETTLE);
 
     // Try to extract response
     let response = this.extractResponseText();
 
     // If no response found, poll for content changes
     if (!response) {
-      const pollInterval = 500;
-      const maxPollTime = Math.min(30000, timeoutMs - (Date.now() - startTime));
-      const pollEndTime = Date.now() + maxPollTime;
-
-      while (Date.now() < pollEndTime) {
-        await this.sleep(pollInterval);
-
-        // Check if we have more responses now
-        const currentResponseCount = document.querySelectorAll(selectors.responseContainerSelector).length;
-        if (currentResponseCount > initialResponseCount) {
-          await this.sleep(1000); // Wait for streaming to complete
-          response = this.extractResponseText();
-          if (response) break;
-        }
-
-        // Try extracting anyway
-        response = this.extractResponseText();
-        if (response) break;
-      }
+      response = await this.pollForResponse(selectors, initialResponseCount, startTime, timeoutMs);
     }
 
     if (!response) {
@@ -118,6 +128,64 @@ export abstract class BaseProviderAdapter implements IProviderAdapter {
     }
 
     return response;
+  }
+
+  /**
+   * Waits for loading indicator to appear and then disappear.
+   */
+  private async waitForLoadingIndicator(
+    selectors: ProviderSelectors,
+    startTime: number,
+    timeoutMs: number
+  ): Promise<void> {
+    if (!selectors.loadingIndicatorSelector) return;
+
+    try {
+      await waitForElement(selectors.loadingIndicatorSelector, TIMEOUTS.LOADING_INDICATOR);
+    } catch {
+      // Loading indicator might not appear for fast responses
+    }
+
+    try {
+      await waitForElementRemoval(
+        selectors.loadingIndicatorSelector,
+        timeoutMs - (Date.now() - startTime)
+      );
+    } catch {
+      // Don't throw here - try to get response anyway
+      console.log('Loading indicator timeout, trying to get response anyway');
+    }
+  }
+
+  /**
+   * Polls for new response content when loading indicator is not available.
+   */
+  private async pollForResponse(
+    selectors: ProviderSelectors,
+    initialResponseCount: number,
+    startTime: number,
+    timeoutMs: number
+  ): Promise<string> {
+    const maxPollTime = Math.min(TIMEOUTS.MAX_POLL_TIME, timeoutMs - (Date.now() - startTime));
+    const pollEndTime = Date.now() + maxPollTime;
+
+    while (Date.now() < pollEndTime) {
+      await this.sleep(TIMEOUTS.POLL_INTERVAL);
+
+      // Check if we have more responses now
+      const currentResponseCount = document.querySelectorAll(selectors.responseContainerSelector).length;
+      if (currentResponseCount > initialResponseCount) {
+        await this.sleep(TIMEOUTS.STREAMING_COMPLETE);
+        const response = this.extractResponseText();
+        if (response) return response;
+      }
+
+      // Try extracting anyway
+      const response = this.extractResponseText();
+      if (response) return response;
+    }
+
+    return '';
   }
 
   abstract getResponse(): string | null;
@@ -150,12 +218,12 @@ export abstract class BaseProviderAdapter implements IProviderAdapter {
 
   protected async waitForButtonEnabled(
     button: HTMLButtonElement,
-    timeout = 5000
+    timeout = TIMEOUTS.BUTTON_ENABLED
   ): Promise<void> {
     const startTime = Date.now();
 
     while (button.disabled && Date.now() - startTime < timeout) {
-      await this.sleep(100);
+      await this.sleep(TIMEOUTS.BUTTON_POLL_INTERVAL);
     }
 
     if (button.disabled) {
@@ -168,44 +236,20 @@ export abstract class BaseProviderAdapter implements IProviderAdapter {
   }
 
   protected notifyReady(): void {
-    chrome.runtime.sendMessage({
-      type: 'PROVIDER_STATUS_UPDATE',
-      payload: {
-        status: {
-          providerId: this.providerId,
-          isConnected: true,
-          isLoggedIn: this.isLoggedIn(),
-          isReady: this.isReady(),
-        },
-      },
-      timestamp: Date.now(),
+    MessageService.notifyProviderStatus({
+      providerId: this.providerId,
+      isConnected: true,
+      isLoggedIn: this.isLoggedIn(),
+      isReady: this.isReady(),
     });
   }
 
   protected notifyResponse(queryId: string, text: string): void {
     const durationMs = Date.now() - this.queryStartTime;
-
-    chrome.runtime.sendMessage({
-      type: 'RESPONSE_RECEIVED',
-      payload: {
-        queryId,
-        providerId: this.providerId,
-        text,
-        durationMs,
-      },
-      timestamp: Date.now(),
-    });
+    MessageService.notifyResponseReceived(queryId, this.providerId, text, durationMs);
   }
 
   protected notifyError(queryId: string, error: string): void {
-    chrome.runtime.sendMessage({
-      type: 'RESPONSE_ERROR',
-      payload: {
-        queryId,
-        providerId: this.providerId,
-        error,
-      },
-      timestamp: Date.now(),
-    });
+    MessageService.notifyResponseError(queryId, this.providerId, error);
   }
 }
