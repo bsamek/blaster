@@ -29,6 +29,7 @@ interface MockChromeAPI {
   };
   tabs: {
     query: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     sendMessage: ReturnType<typeof vi.fn>;
@@ -129,6 +130,7 @@ export function createMockChromeAPI(): MockChromeAPI {
     },
     tabs: {
       query: vi.fn(async () => []),
+      get: vi.fn(async (tabId: number) => ({ id: tabId, url: 'https://example.com' })),
       create: vi.fn(async (options: { url: string }) => ({
         id: Math.floor(Math.random() * 10000),
         url: options.url,

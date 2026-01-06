@@ -16,16 +16,26 @@ export function App() {
 
   // Capture source tab on mount and update when tab changes
   useEffect(() => {
-    // Capture initial active tab
+    const AI_PROVIDER_PATTERNS = ['chatgpt.com', 'claude.ai', 'gemini.google.com'];
+
+    const isAIProviderTab = (url: string | undefined): boolean => {
+      if (!url) return false;
+      return AI_PROVIDER_PATTERNS.some((pattern) => url.includes(pattern));
+    };
+
+    // Capture initial active tab (if not an AI provider tab)
     chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
-      if (tab?.id) {
+      if (tab?.id && !isAIProviderTab(tab.url)) {
         setSourceTabId(tab.id);
       }
     });
 
-    // Update when user switches tabs
-    const handleTabActivated = (activeInfo: { tabId: number }) => {
-      setSourceTabId(activeInfo.tabId);
+    // Update when user switches tabs (but not to AI provider tabs)
+    const handleTabActivated = async (activeInfo: { tabId: number }) => {
+      const tab = await chrome.tabs.get(activeInfo.tabId);
+      if (!isAIProviderTab(tab.url)) {
+        setSourceTabId(activeInfo.tabId);
+      }
     };
 
     chrome.tabs.onActivated.addListener(handleTabActivated);
