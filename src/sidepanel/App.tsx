@@ -18,22 +18,25 @@ export function App() {
   useEffect(() => {
     const AI_PROVIDER_PATTERNS = ['chatgpt.com', 'claude.ai', 'gemini.google.com'];
 
-    const isAIProviderTab = (url: string | undefined): boolean => {
-      if (!url) return false;
+    const shouldIgnoreTab = (url: string | undefined): boolean => {
+      // Ignore tabs with no URL, chrome:// URLs, and AI provider tabs
+      if (!url) return true;
+      if (url.startsWith('chrome://') || url.startsWith('chrome-extension://')) return true;
+      if (url === 'about:blank') return true;
       return AI_PROVIDER_PATTERNS.some((pattern) => url.includes(pattern));
     };
 
-    // Capture initial active tab (if not an AI provider tab)
+    // Capture initial active tab (if valid)
     chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
-      if (tab?.id && !isAIProviderTab(tab.url)) {
+      if (tab?.id && !shouldIgnoreTab(tab.url)) {
         setSourceTabId(tab.id);
       }
     });
 
-    // Update when user switches tabs (but not to AI provider tabs)
+    // Update when user switches tabs (but not to ignored tabs)
     const handleTabActivated = async (activeInfo: { tabId: number }) => {
       const tab = await chrome.tabs.get(activeInfo.tabId);
-      if (!isAIProviderTab(tab.url)) {
+      if (!shouldIgnoreTab(tab.url)) {
         setSourceTabId(activeInfo.tabId);
       }
     };
@@ -89,11 +92,35 @@ export function App() {
   };
 
   const getPageContents = async (): Promise<string> => {
-    if (!sourceTabId) return '';
+    const AI_PROVIDER_PATTERNS = ['chatgpt.com', 'claude.ai', 'gemini.google.com'];
+
+    const shouldIgnoreUrl = (url: string | undefined): boolean => {
+      if (!url) return true;
+      if (url.startsWith('chrome://') || url.startsWith('chrome-extension://')) return true;
+      if (url === 'about:blank') return true;
+      return AI_PROVIDER_PATTERNS.some((pattern) => url.includes(pattern));
+    };
+
+    // First, check the current active tab - use it if valid
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    let tabIdToUse: number | null = null;
+
+    if (activeTab?.id && !shouldIgnoreUrl(activeTab.url)) {
+      // Current active tab is valid, use it
+      tabIdToUse = activeTab.id;
+    } else if (sourceTabId) {
+      // Fall back to tracked source tab
+      tabIdToUse = sourceTabId;
+    }
+
+    if (!tabIdToUse) {
+      return '';
+    }
 
     try {
       const results = await chrome.scripting.executeScript({
-        target: { tabId: sourceTabId },
+        target: { tabId: tabIdToUse },
         func: () => {
           // Try to find main content areas first (common for news articles)
           const selectors = [
