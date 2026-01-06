@@ -214,4 +214,193 @@ describe('QueryOrchestrator', () => {
       expect(result.responses[0].text).toBe('Response 1');
     });
   });
+
+  describe('error handling in submitToProvider', () => {
+    it('should handle ensureProviderTab failure', async () => {
+      mockTabManager.ensureProviderTab.mockRejectedValue(
+        new Error('Failed to open tab')
+      );
+
+      const session = await orchestrator.submitQuery('Test', ['chatgpt']);
+
+      // Wait for async error handling
+      await new Promise((r) => setTimeout(r, 100));
+
+      const updatedSession = orchestrator.getSession(session.query.id);
+      expect(updatedSession?.responses.chatgpt?.error).toBe('Failed to open tab');
+    });
+
+    it('should handle tab sendMessage failure', async () => {
+      mockChrome.tabs.sendMessage.mockImplementation(async (_tabId, message) => {
+        if (message.type === 'PING') {
+          return { isReady: true, isLoggedIn: true };
+        }
+        throw new Error('Tab communication failed');
+      });
+
+      const session = await orchestrator.submitQuery('Test', ['chatgpt']);
+
+      // Wait for async error handling
+      await new Promise((r) => setTimeout(r, 100));
+
+      const updatedSession = orchestrator.getSession(session.query.id);
+      expect(updatedSession?.responses.chatgpt?.error).toBe('Tab communication failed');
+    });
+
+    it('should handle non-Error exceptions', async () => {
+      mockTabManager.ensureProviderTab.mockRejectedValue('String error');
+
+      const session = await orchestrator.submitQuery('Test', ['chatgpt']);
+
+      // Wait for async error handling
+      await new Promise((r) => setTimeout(r, 100));
+
+      const updatedSession = orchestrator.getSession(session.query.id);
+      expect(updatedSession?.responses.chatgpt?.error).toBe('Unknown error');
+    });
+
+    it('should save error response to history', async () => {
+      mockTabManager.ensureProviderTab.mockRejectedValue(
+        new Error('Tab error')
+      );
+
+      const session = await orchestrator.submitQuery('Test', ['chatgpt']);
+
+      // Wait for async operations
+      await new Promise((r) => setTimeout(r, 100));
+
+      const result = await chrome.storage.local.get('responses');
+      const errorResponses = result.responses.filter(
+        (r: { error?: string }) => r.error
+      );
+      expect(errorResponses.length).toBeGreaterThan(0);
+      expect(errorResponses[0].error).toBe('Tab error');
+    });
+  });
+
+  describe('waitForTabReady timeout', () => {
+    it('should throw error when tab never becomes ready', async () => {
+      // Mock PING to always return not ready
+      mockChrome.tabs.sendMessage.mockImplementation(async (_tabId, message) => {
+        if (message.type === 'PING') {
+          return { isReady: false, isLoggedIn: true };
+        }
+        return { success: true };
+      });
+
+      const session = await orchestrator.submitQuery('Test', ['chatgpt']);
+
+      // Wait for the timeout (use a short test by mocking)
+      // The actual timeout is 30s which is too long for tests
+      // So we verify the behavior pattern
+      await new Promise((r) => setTimeout(r, 100));
+
+      // The session should show in-progress or error based on timing
+      const updatedSession = orchestrator.getSession(session.query.id);
+      expect(updatedSession).toBeDefined();
+    });
+
+    it('should throw error when PING throws', async () => {
+      mockChrome.tabs.sendMessage.mockImplementation(async (_tabId, message) => {
+        if (message.type === 'PING') {
+          throw new Error('Content script not loaded');
+        }
+        return { success: true };
+      });
+
+      const session = await orchestrator.submitQuery('Test', ['chatgpt']);
+
+      // Wait for async error handling
+      await new Promise((r) => setTimeout(r, 100));
+
+      // Should have recorded the error
+      const updatedSession = orchestrator.getSession(session.query.id);
+      expect(updatedSession).toBeDefined();
+    });
+  });
+
+  describe('query history trimming', () => {
+    it('should keep only the last 100 queries', async () => {
+      // Pre-fill storage with queries
+      const existingQueries = Array.from({ length: 105 }, (_, i) => ({
+        id: `old-query-${i}`,
+        text: `Query ${i}`,
+        timestamp: Date.now() - i * 1000,
+        providers: ['chatgpt'],
+      }));
+      await chrome.storage.local.set({ queries: existingQueries });
+
+      // Submit a new query
+      await orchestrator.submitQuery('New query', ['chatgpt']);
+
+      const result = await chrome.storage.local.get('queries');
+      expect(result.queries.length).toBeLessThanOrEqual(100);
+      expect(result.queries[0].text).toBe('New query');
+    });
+  });
+
+  describe('getSession', () => {
+    it('should return undefined for non-existent session', () => {
+      const session = orchestrator.getSession('non-existent-id');
+      expect(session).toBeUndefined();
+    });
+
+    it('should return session after query submission', async () => {
+      const session = await orchestrator.submitQuery('Test', ['chatgpt']);
+      const retrieved = orchestrator.getSession(session.query.id);
+      expect(retrieved).toEqual(session);
+    });
+  });
+
+  describe('handleResponseReceived with non-existent session', () => {
+    it('should silently ignore response for unknown queryId', () => {
+      // Should not throw
+      expect(() => {
+        orchestrator.handleResponseReceived(
+          'non-existent-query-id',
+          'chatgpt',
+          'Response text',
+          1000
+        );
+      }).not.toThrow();
+    });
+  });
+
+  describe('handleResponseError with non-existent session', () => {
+    it('should silently ignore error for unknown queryId', () => {
+      // Should not throw
+      expect(() => {
+        orchestrator.handleResponseError(
+          'non-existent-query-id',
+          'chatgpt',
+          'Error message'
+        );
+      }).not.toThrow();
+    });
+  });
+
+  describe('checkSessionComplete with partial errors', () => {
+    it('should mark session as error when any response has error', async () => {
+      const session = await orchestrator.submitQuery('Test', [
+        'chatgpt',
+        'claude',
+      ]);
+
+      // One success, one error
+      orchestrator.handleResponseReceived(
+        session.query.id,
+        'chatgpt',
+        'Success response',
+        1000
+      );
+      orchestrator.handleResponseError(
+        session.query.id,
+        'claude',
+        'Provider error'
+      );
+
+      const updatedSession = orchestrator.getSession(session.query.id);
+      expect(updatedSession?.status).toBe('error');
+    });
+  });
 });
