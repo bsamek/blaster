@@ -14,13 +14,25 @@ export function App() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [sourceTabId, setSourceTabId] = useState<number | null>(null);
 
-  // Capture the source tab ID on mount (before any AI tabs are opened)
+  // Capture source tab on mount and update when tab changes
   useEffect(() => {
+    // Capture initial active tab
     chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
       if (tab?.id) {
         setSourceTabId(tab.id);
       }
     });
+
+    // Update when user switches tabs
+    const handleTabActivated = (activeInfo: { tabId: number }) => {
+      setSourceTabId(activeInfo.tabId);
+    };
+
+    chrome.tabs.onActivated.addListener(handleTabActivated);
+
+    return () => {
+      chrome.tabs.onActivated.removeListener(handleTabActivated);
+    };
   }, []);
 
   // Load settings from storage on mount

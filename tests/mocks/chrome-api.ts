@@ -40,6 +40,10 @@ interface MockChromeAPI {
       addListener: ReturnType<typeof vi.fn>;
       removeListener: ReturnType<typeof vi.fn>;
     };
+    onActivated: {
+      addListener: ReturnType<typeof vi.fn>;
+      removeListener: ReturnType<typeof vi.fn>;
+    };
   };
   sidePanel: {
     setOptions: ReturnType<typeof vi.fn>;
@@ -139,6 +143,10 @@ export function createMockChromeAPI(): MockChromeAPI {
         removeListener: vi.fn(),
       },
       onRemoved: {
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+      },
+      onActivated: {
         addListener: vi.fn(),
         removeListener: vi.fn(),
       },
