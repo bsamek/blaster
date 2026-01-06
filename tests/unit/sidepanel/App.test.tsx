@@ -276,7 +276,10 @@ describe('Sidepanel App', () => {
 
       // Wait for initial load
       await waitFor(() => {
-        expect(mockChrome.storage.local.get).toHaveBeenCalledWith('selectedProviders');
+        expect(mockChrome.storage.local.get).toHaveBeenCalledWith([
+          'selectedProviders',
+          'includePageContents',
+        ]);
       });
 
       await user.click(screen.getByText('ChatGPT'));
@@ -292,7 +295,10 @@ describe('Sidepanel App', () => {
       render(<App />);
 
       await waitFor(() => {
-        expect(mockChrome.storage.local.get).toHaveBeenCalledWith('selectedProviders');
+        expect(mockChrome.storage.local.get).toHaveBeenCalledWith([
+          'selectedProviders',
+          'includePageContents',
+        ]);
       });
 
       // All providers should be selected by default
