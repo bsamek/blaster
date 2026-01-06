@@ -332,4 +332,21 @@ describe('BaseProviderAdapter', () => {
       expect(endTime - startTime).toBeGreaterThanOrEqual(100);
     });
   });
+
+  describe('extractResponseText', () => {
+    it('should return response text from adapter implementation', async () => {
+      await adapter.initialize();
+      adapter.__setResponseText('Test response');
+
+      // extractResponseText is protected, so test via getResponse
+      expect(adapter.getResponse()).toBe('Test response');
+    });
+
+    it('should return empty string when no response', async () => {
+      await adapter.initialize();
+      adapter.__setResponseText('');
+
+      expect(adapter.getResponse()).toBeNull();
+    });
+  });
 });

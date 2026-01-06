@@ -1,5 +1,7 @@
 import { BaseProviderAdapter } from '../base-adapter';
 import { waitForElement } from '../dom-observer';
+import { isContentEditable, setContentEditableText, asButton } from '../dom-utils';
+import { TIMEOUTS } from '../../shared/constants';
 import type { ProviderId, ProviderSelectors } from '../../shared/types';
 
 export class GeminiAdapter extends BaseProviderAdapter {
@@ -17,28 +19,26 @@ export class GeminiAdapter extends BaseProviderAdapter {
   }
 
   protected async waitForDOMReady(): Promise<void> {
-    await waitForElement(this.getSelectors().textareaSelector, 30000);
+    await waitForElement(this.getSelectors().textareaSelector, TIMEOUTS.DOM_READY);
   }
 
   async submitQuery(query: string): Promise<void> {
     const selectors = this.getSelectors();
     const inputElement = await waitForElement(selectors.textareaSelector);
 
-    if (inputElement.getAttribute('contenteditable') === 'true') {
-      // Contenteditable div
-      (inputElement as HTMLElement).focus();
-      inputElement.textContent = query;
-      inputElement.dispatchEvent(new InputEvent('input', { bubbles: true, data: query }));
+    if (isContentEditable(inputElement)) {
+      setContentEditableText(inputElement, query);
     } else {
       // Regular textarea
       this.setInputValue(inputElement as HTMLTextAreaElement, query);
     }
 
-    await this.sleep(200);
+    await this.sleep(TIMEOUTS.PRE_SUBMIT_DELAY);
 
     const submitButton = await waitForElement(selectors.submitButtonSelector);
-    await this.waitForButtonEnabled(submitButton as HTMLButtonElement);
-    (submitButton as HTMLButtonElement).click();
+    const button = asButton(submitButton, selectors.submitButtonSelector);
+    await this.waitForButtonEnabled(button);
+    button.click();
 
     this.queryStartTime = Date.now();
   }

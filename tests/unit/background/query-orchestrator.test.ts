@@ -170,4 +170,48 @@ describe('QueryOrchestrator', () => {
       );
     });
   });
+
+  describe('saveToHistory', () => {
+    it('should prepend queries to history', async () => {
+      await orchestrator.submitQuery('First query', ['chatgpt']);
+      await orchestrator.submitQuery('Second query', ['chatgpt']);
+
+      const result = await chrome.storage.local.get('queries');
+      expect(result.queries).toHaveLength(2);
+      expect(result.queries[0].text).toBe('Second query');
+      expect(result.queries[1].text).toBe('First query');
+    });
+
+    it('should limit query history to 100 items', async () => {
+      // Pre-populate storage with 100 queries
+      const existingQueries = Array.from({ length: 100 }, (_, i) => ({
+        id: `old-${i}`,
+        text: `Old query ${i}`,
+        timestamp: Date.now(),
+        providers: ['chatgpt'],
+      }));
+      await chrome.storage.local.set({ queries: existingQueries });
+
+      // Submit a new query
+      await orchestrator.submitQuery('New query', ['chatgpt']);
+
+      const result = await chrome.storage.local.get('queries');
+      expect(result.queries).toHaveLength(100);
+      expect(result.queries[0].text).toBe('New query');
+      expect(result.queries[99].text).toBe('Old query 98');
+    });
+
+    it('should append responses to history', async () => {
+      const session = await orchestrator.submitQuery('Test', ['chatgpt']);
+
+      orchestrator.handleResponseReceived(session.query.id, 'chatgpt', 'Response 1', 1000);
+
+      // Wait for async storage operation
+      await new Promise((r) => setTimeout(r, 50));
+
+      const result = await chrome.storage.local.get('responses');
+      expect(result.responses).toHaveLength(1);
+      expect(result.responses[0].text).toBe('Response 1');
+    });
+  });
 });

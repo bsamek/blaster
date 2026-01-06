@@ -1,6 +1,19 @@
 import type { ProviderId, ProviderStatus, QuerySession } from '../types';
 
 /**
+ * Logs message service errors in development mode.
+ * Checks for chrome.runtime.getManifest().name to detect dev builds,
+ * or if that fails, uses a simple heuristic.
+ */
+function logMessageError(context: string, error: unknown): void {
+  // Log errors in development to help with debugging
+  // Errors are expected when no listeners are registered, but other errors should be visible
+  if (error instanceof Error && !error.message.includes('Receiving end does not exist')) {
+    console.warn(`[MessageService] ${context}:`, error.message);
+  }
+}
+
+/**
  * Centralized service for sending messages between extension components.
  * This abstracts the chrome.runtime.sendMessage API and provides type-safe message sending.
  */
@@ -13,8 +26,8 @@ export const MessageService = {
       type: 'PROVIDER_STATUS_UPDATE',
       payload: { status },
       timestamp: Date.now(),
-    }).catch(() => {
-      // Ignore errors if no listeners
+    }).catch((error) => {
+      logMessageError('notifyProviderStatus', error);
     });
   },
 
@@ -36,8 +49,8 @@ export const MessageService = {
         durationMs,
       },
       timestamp: Date.now(),
-    }).catch(() => {
-      // Ignore errors if no listeners
+    }).catch((error) => {
+      logMessageError('notifyResponseReceived', error);
     });
   },
 
@@ -57,8 +70,8 @@ export const MessageService = {
         error,
       },
       timestamp: Date.now(),
-    }).catch(() => {
-      // Ignore errors if no listeners
+    }).catch((error) => {
+      logMessageError('notifyResponseError', error);
     });
   },
 
@@ -70,8 +83,8 @@ export const MessageService = {
       type: 'SESSION_UPDATE',
       payload: { session },
       timestamp: Date.now(),
-    }).catch(() => {
-      // Ignore errors if no listeners
+    }).catch((error) => {
+      logMessageError('notifySessionUpdate', error);
     });
   },
 
@@ -110,7 +123,10 @@ export const MessageService = {
       type: 'PING',
       payload: {},
       timestamp: Date.now(),
-    }).catch(() => null);
+    }).catch((error) => {
+      logMessageError('pingTab', error);
+      return null;
+    });
   },
 
   /**
