@@ -1,5 +1,7 @@
 import { BaseProviderAdapter } from '../base-adapter';
 import { waitForElement } from '../dom-observer';
+import { isProseMirror, setContentEditableText, asButton } from '../dom-utils';
+import { TIMEOUTS } from '../../shared/constants';
 import type { ProviderId, ProviderSelectors } from '../../shared/types';
 
 export class ClaudeAdapter extends BaseProviderAdapter {
@@ -18,43 +20,7 @@ export class ClaudeAdapter extends BaseProviderAdapter {
   }
 
   protected async waitForDOMReady(): Promise<void> {
-    await waitForElement(this.getSelectors().textareaSelector, 30000);
-  }
-
-  protected setupEventListeners(): void {
-    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-      if (message.type === 'SUBMIT_QUERY') {
-        this.handleSubmitQuery(message.payload.queryId, message.payload.text)
-          .then(() => sendResponse({ success: true }))
-          .catch((error) => sendResponse({ success: false, error: error.message }));
-        return true;
-      }
-
-      if (message.type === 'PING') {
-        sendResponse({
-          providerId: this.providerId,
-          isReady: this.isReady(),
-          isLoggedIn: this.isLoggedIn(),
-        });
-        return true;
-      }
-    });
-
-    this.observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    }, () => {});
-  }
-
-  private async handleSubmitQuery(queryId: string, text: string): Promise<void> {
-    try {
-      await this.submitQuery(text);
-      const response = await this.waitForResponse();
-      this.notifyResponse(queryId, response);
-    } catch (error) {
-      this.notifyError(queryId, error instanceof Error ? error.message : 'Unknown error');
-    }
+    await waitForElement(this.getSelectors().textareaSelector, TIMEOUTS.DOM_READY);
   }
 
   async submitQuery(query: string): Promise<void> {
@@ -62,35 +28,25 @@ export class ClaudeAdapter extends BaseProviderAdapter {
     const inputElement = await waitForElement(selectors.textareaSelector);
 
     // Claude uses ProseMirror contenteditable
-    if (inputElement.classList.contains('ProseMirror') || inputElement.getAttribute('contenteditable') === 'true') {
-      (inputElement as HTMLElement).focus();
-
-      // Clear existing content
-      const paragraph = inputElement.querySelector('p');
-      if (paragraph) {
-        paragraph.textContent = query;
-      } else {
-        inputElement.textContent = query;
-      }
-
-      // Trigger input events
-      inputElement.dispatchEvent(new InputEvent('input', { bubbles: true, data: query }));
+    if (isProseMirror(inputElement)) {
+      setContentEditableText(inputElement, query);
     } else {
       // Fallback for textarea
       this.setInputValue(inputElement as HTMLTextAreaElement, query);
     }
 
-    await this.sleep(100);
+    await this.sleep(TIMEOUTS.BUTTON_POLL_INTERVAL);
 
     const submitButton = await waitForElement(selectors.submitButtonSelector);
-    await this.waitForButtonEnabled(submitButton as HTMLButtonElement);
-    (submitButton as HTMLButtonElement).click();
+    const button = asButton(submitButton, selectors.submitButtonSelector);
+    await this.waitForButtonEnabled(button);
+    button.click();
 
     this.queryStartTime = Date.now();
   }
 
   // Override waitForResponse with Claude-specific streaming detection
-  async waitForResponse(timeoutMs = 60000): Promise<string> {
+  async waitForResponse(timeoutMs = TIMEOUTS.RESPONSE_WAIT): Promise<string> {
     const startTime = Date.now();
 
     // Wait for streaming to complete by checking for data-is-streaming="false"
@@ -100,7 +56,7 @@ export class ClaudeAdapter extends BaseProviderAdapter {
       const completedResponse = document.querySelector('[data-is-streaming="false"]');
       if (completedResponse) {
         // Wait a bit for final content to settle
-        await this.sleep(300);
+        await this.sleep(TIMEOUTS.CLAUDE_SETTLE);
         const response = this.extractResponseText();
         if (response) {
           return response;
@@ -111,11 +67,11 @@ export class ClaudeAdapter extends BaseProviderAdapter {
       const stillStreaming = document.querySelector('[data-is-streaming="true"]');
       if (!stillStreaming && !completedResponse) {
         // Neither streaming nor completed - might be initial state, keep waiting
-        await this.sleep(200);
+        await this.sleep(TIMEOUTS.STREAMING_CHECK);
         continue;
       }
 
-      await this.sleep(200);
+      await this.sleep(TIMEOUTS.STREAMING_CHECK);
     }
 
     // Final attempt to extract response

@@ -346,6 +346,23 @@ describe('BaseProviderAdapter', () => {
     });
   });
 
+  describe('extractResponseText', () => {
+    it('should return response text from adapter implementation', async () => {
+      await adapter.initialize();
+      adapter.__setResponseText('Test response');
+
+      // extractResponseText is protected, so test via getResponse
+      expect(adapter.getResponse()).toBe('Test response');
+    });
+
+    it('should return empty string when no response', async () => {
+      await adapter.initialize();
+      adapter.__setResponseText('');
+
+      expect(adapter.getResponse()).toBeNull();
+    });
+  });
+
   describe('notifyResponse (protected)', () => {
     it('should send RESPONSE_RECEIVED message with queryId and text', async () => {
       await adapter.initialize();

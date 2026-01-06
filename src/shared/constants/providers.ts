@@ -1,5 +1,10 @@
 import type { ProviderConfig, ProviderId } from '../types';
 
+/**
+ * List of all provider IDs. Use this instead of hardcoding ['chatgpt', 'claude', 'gemini'].
+ */
+export const PROVIDER_IDS: readonly ProviderId[] = ['chatgpt', 'claude', 'gemini'] as const;
+
 export const PROVIDERS: Record<ProviderId, ProviderConfig> = {
   chatgpt: {
     id: 'chatgpt',

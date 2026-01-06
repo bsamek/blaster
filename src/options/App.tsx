@@ -1,7 +1,97 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, CSSProperties } from 'react';
 import type { UserPreferences, ProviderId } from '../shared/types';
 import { DEFAULT_PREFERENCES } from '../shared/types';
-import { PROVIDERS } from '../shared/constants';
+import { PROVIDERS, PROVIDER_IDS } from '../shared/constants';
+
+/**
+ * Centralized styles for the Options page.
+ */
+const styles = {
+  container: {
+    padding: '16px',
+  } as CSSProperties,
+
+  title: {
+    fontSize: '24px',
+    marginBottom: '24px',
+    background: 'linear-gradient(90deg, #4facfe, #00f2fe)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+  } as CSSProperties,
+
+  section: {
+    marginBottom: '24px',
+  } as CSSProperties,
+
+  sectionTitle: {
+    fontSize: '16px',
+    marginBottom: '12px',
+    color: '#ccc',
+  } as CSSProperties,
+
+  sectionDescription: {
+    fontSize: '14px',
+    color: '#888',
+    marginBottom: '12px',
+  } as CSSProperties,
+
+  buttonRow: {
+    display: 'flex',
+    gap: '8px',
+  } as CSSProperties,
+
+  footerRow: {
+    display: 'flex',
+    gap: '12px',
+    alignItems: 'center',
+  } as CSSProperties,
+
+  baseButton: {
+    padding: '8px 16px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '14px',
+  } as CSSProperties,
+
+  primaryButton: {
+    padding: '10px 24px',
+    border: 'none',
+    borderRadius: '6px',
+    background: 'linear-gradient(90deg, #4facfe, #00f2fe)',
+    color: '#fff',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '600',
+  } as CSSProperties,
+
+  dangerButton: {
+    padding: '8px 16px',
+    border: '1px solid #ef4444',
+    borderRadius: '6px',
+    background: 'rgba(239, 68, 68, 0.1)',
+    color: '#ef4444',
+    cursor: 'pointer',
+    fontSize: '14px',
+  } as CSSProperties,
+
+  successText: {
+    color: '#10b981',
+    fontSize: '14px',
+  } as CSSProperties,
+};
+
+/**
+ * Creates provider toggle button styles based on selection state.
+ */
+function getProviderButtonStyle(providerId: ProviderId, isSelected: boolean): CSSProperties {
+  const providerColor = PROVIDERS[providerId].color;
+  return {
+    ...styles.baseButton,
+    border: `1px solid ${isSelected ? providerColor : '#3a3a5c'}`,
+    background: isSelected ? `${providerColor}20` : 'transparent',
+    color: isSelected ? providerColor : '#888',
+  };
+}
 
 export function App() {
   const [preferences, setPreferences] =
@@ -43,97 +133,43 @@ export function App() {
   };
 
   return (
-    <div style={{ padding: '16px' }}>
-      <h1
-        style={{
-          fontSize: '24px',
-          marginBottom: '24px',
-          background: 'linear-gradient(90deg, #4facfe, #00f2fe)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-        }}
-      >
-        AI Blaster Options
-      </h1>
+    <div style={styles.container}>
+      <h1 style={styles.title}>AI Blaster Options</h1>
 
-      <section style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '16px', marginBottom: '12px', color: '#ccc' }}>
-          Default Providers
-        </h2>
-        <p style={{ fontSize: '14px', color: '#888', marginBottom: '12px' }}>
+      <section style={styles.section}>
+        <h2 style={styles.sectionTitle}>Default Providers</h2>
+        <p style={styles.sectionDescription}>
           Select which providers are selected by default when you open the
           extension.
         </p>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {(['chatgpt', 'claude', 'gemini'] as ProviderId[]).map(
-            (providerId) => (
-              <button
-                key={providerId}
-                onClick={() => toggleProvider(providerId)}
-                style={{
-                  padding: '8px 16px',
-                  border: `1px solid ${
-                    preferences.defaultProviders.includes(providerId)
-                      ? PROVIDERS[providerId].color
-                      : '#3a3a5c'
-                  }`,
-                  borderRadius: '6px',
-                  background: preferences.defaultProviders.includes(providerId)
-                    ? `${PROVIDERS[providerId].color}20`
-                    : 'transparent',
-                  color: preferences.defaultProviders.includes(providerId)
-                    ? PROVIDERS[providerId].color
-                    : '#888',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                }}
-              >
-                {PROVIDERS[providerId].name}
-              </button>
-            )
-          )}
+        <div style={styles.buttonRow}>
+          {PROVIDER_IDS.map((providerId) => (
+            <button
+              key={providerId}
+              onClick={() => toggleProvider(providerId)}
+              style={getProviderButtonStyle(
+                providerId,
+                preferences.defaultProviders.includes(providerId)
+              )}
+            >
+              {PROVIDERS[providerId].name}
+            </button>
+          ))}
         </div>
       </section>
 
-      <section style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '16px', marginBottom: '12px', color: '#ccc' }}>
-          Data Management
-        </h2>
-        <button
-          onClick={handleClearHistory}
-          style={{
-            padding: '8px 16px',
-            border: '1px solid #ef4444',
-            borderRadius: '6px',
-            background: 'rgba(239, 68, 68, 0.1)',
-            color: '#ef4444',
-            cursor: 'pointer',
-            fontSize: '14px',
-          }}
-        >
+      <section style={styles.section}>
+        <h2 style={styles.sectionTitle}>Data Management</h2>
+        <button onClick={handleClearHistory} style={styles.dangerButton}>
           Clear All History
         </button>
       </section>
 
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-        <button
-          onClick={handleSave}
-          style={{
-            padding: '10px 24px',
-            border: 'none',
-            borderRadius: '6px',
-            background: 'linear-gradient(90deg, #4facfe, #00f2fe)',
-            color: '#fff',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '600',
-          }}
-        >
+      <div style={styles.footerRow}>
+        <button onClick={handleSave} style={styles.primaryButton}>
           Save Changes
         </button>
-        {saved && (
-          <span style={{ color: '#10b981', fontSize: '14px' }}>Saved!</span>
-        )}
+        {saved && <span style={styles.successText}>Saved!</span>}
       </div>
     </div>
   );

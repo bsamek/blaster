@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import type { ProviderId } from '../shared/types';
-import { PROVIDERS, STORAGE_KEYS } from '../shared/constants';
+import { PROVIDERS, PROVIDER_IDS, STORAGE_KEYS } from '../shared/constants';
 
 export function App() {
   const [query, setQuery] = useState('');
   const [selectedProviders, setSelectedProviders] = useState<ProviderId[]>([
-    'chatgpt',
-    'claude',
-    'gemini',
+    ...PROVIDER_IDS,
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -91,7 +89,7 @@ export function App() {
           data-testid="query-input"
         />
         <div className="providers-row">
-          {(['chatgpt', 'claude', 'gemini'] as ProviderId[]).map((providerId) => (
+          {PROVIDER_IDS.map((providerId) => (
             <button
               key={providerId}
               className={`provider-toggle ${providerId} ${

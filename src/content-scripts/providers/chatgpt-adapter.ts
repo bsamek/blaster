@@ -1,5 +1,7 @@
 import { BaseProviderAdapter } from '../base-adapter';
 import { waitForElement } from '../dom-observer';
+import { isContentEditable, setContentEditableText, asButton } from '../dom-utils';
+import { TIMEOUTS } from '../../shared/constants';
 import type { ProviderId, ProviderSelectors } from '../../shared/types';
 
 export class ChatGPTAdapter extends BaseProviderAdapter {
@@ -17,45 +19,7 @@ export class ChatGPTAdapter extends BaseProviderAdapter {
   }
 
   protected async waitForDOMReady(): Promise<void> {
-    await waitForElement(this.getSelectors().textareaSelector, 30000);
-  }
-
-  protected setupEventListeners(): void {
-    // Listen for message from background script
-    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-      if (message.type === 'SUBMIT_QUERY') {
-        this.handleSubmitQuery(message.payload.queryId, message.payload.text)
-          .then(() => sendResponse({ success: true }))
-          .catch((error) => sendResponse({ success: false, error: error.message }));
-        return true; // Indicates async response
-      }
-
-      if (message.type === 'PING') {
-        sendResponse({
-          providerId: this.providerId,
-          isReady: this.isReady(),
-          isLoggedIn: this.isLoggedIn(),
-        });
-        return true;
-      }
-    });
-
-    // Observe DOM for response updates
-    this.observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    }, () => {});
-  }
-
-  private async handleSubmitQuery(queryId: string, text: string): Promise<void> {
-    try {
-      await this.submitQuery(text);
-      const response = await this.waitForResponse();
-      this.notifyResponse(queryId, response);
-    } catch (error) {
-      this.notifyError(queryId, error instanceof Error ? error.message : 'Unknown error');
-    }
+    await waitForElement(this.getSelectors().textareaSelector, TIMEOUTS.DOM_READY);
   }
 
   async submitQuery(query: string): Promise<void> {
@@ -63,40 +27,20 @@ export class ChatGPTAdapter extends BaseProviderAdapter {
     const inputElement = await waitForElement(selectors.textareaSelector);
 
     // ChatGPT uses a contenteditable div (ProseMirror style)
-    if (inputElement.getAttribute('contenteditable') === 'true') {
-      // Focus the element
-      (inputElement as HTMLElement).focus();
-
-      // Clear existing content and set new text
-      // ProseMirror typically has a <p> inside, or we set text directly
-      const paragraph = inputElement.querySelector('p');
-      if (paragraph) {
-        paragraph.textContent = query;
-      } else {
-        inputElement.textContent = query;
-      }
-
-      // Dispatch input event to notify React/ProseMirror
-      inputElement.dispatchEvent(new InputEvent('input', {
-        bubbles: true,
-        cancelable: true,
-        inputType: 'insertText',
-        data: query
-      }));
-
-      // Also dispatch a keyboard event to ensure it's picked up
-      inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+    if (isContentEditable(inputElement)) {
+      setContentEditableText(inputElement, query);
     } else {
       // Fallback for regular textarea
       this.setInputValue(inputElement as HTMLTextAreaElement, query);
     }
 
-    await this.sleep(200);
+    await this.sleep(TIMEOUTS.PRE_SUBMIT_DELAY);
 
     // Find and click submit button
     const submitButton = await waitForElement(selectors.submitButtonSelector);
-    await this.waitForButtonEnabled(submitButton as HTMLButtonElement);
-    (submitButton as HTMLButtonElement).click();
+    const button = asButton(submitButton, selectors.submitButtonSelector);
+    await this.waitForButtonEnabled(button);
+    button.click();
 
     this.queryStartTime = Date.now();
   }
